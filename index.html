@@ -7,307 +7,56 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --pink-light: #F3C4D6;
-    --navy: #394350;
-    --pink-dark: #D56D85;
-    --green: #58634F;
-    --tangerine: #E49855;
-    --bg: #faf8f6;
-    --card: #ffffff;
-    --border: #e8e0d8;
-    --text: #2a2420;
-    --muted: #8a7f78;
+    --pink-light: #F3C4D6; --navy: #394350; --pink-dark: #D56D85;
+    --green: #58634F; --tangerine: #E49855; --bg: #faf8f6;
+    --card: #ffffff; --border: #e8e0d8; --text: #2a2420; --muted: #8a7f78;
   }
-
-  body {
-    font-family: 'Montserrat', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 0;
-  }
-
-  header {
-    background: var(--navy);
-    padding: 18px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 3px solid var(--pink-dark);
-  }
-
-  header h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.25rem;
-    color: var(--pink-light);
-    font-weight: 400;
-    letter-spacing: 0.02em;
-  }
-
-  header .subtitle {
-    font-size: 0.7rem;
-    color: var(--pink-dark);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  #refresh-btn {
-    background: transparent;
-    border: 1px solid var(--pink-dark);
-    color: var(--pink-light);
-    padding: 6px 14px;
-    border-radius: 3px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+  body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { background: var(--navy); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--pink-dark); }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.25rem; color: var(--pink-light); font-weight: 400; }
+  header .subtitle { font-size: 0.7rem; color: var(--pink-dark); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  #refresh-btn { background: transparent; border: 1px solid var(--pink-dark); color: var(--pink-light); padding: 6px 14px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
   #refresh-btn:hover { background: var(--pink-dark); color: white; }
-
-  .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #aaa;
-    display: inline-block;
-  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; display: inline-block; }
   .status-dot.loaded { background: #7cb87c; }
   .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
   .status-dot.error { background: #c97070; }
-
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  .main {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 32px 24px;
-  }
-
-  .loading-state, .error-state {
-    text-align: center;
-    padding: 80px 24px;
-    color: var(--muted);
-  }
-  .loading-state .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--border);
-    border-top-color: var(--pink-dark);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 16px;
-  }
+  .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+  .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--pink-dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .order-count {
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 20px;
-    font-weight: 500;
-  }
-
-  .order-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    margin-bottom: 12px;
-    overflow: hidden;
-    transition: box-shadow 0.2s, border-color 0.2s;
-  }
-  .order-card:hover {
-    box-shadow: 0 4px 16px rgba(57,67,80,0.08);
-    border-color: var(--pink-light);
-  }
-
-  .card-header {
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
-    gap: 16px;
-  }
-
+  .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; font-weight: 500; }
+  .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s; }
+  .order-card:hover { box-shadow: 0 4px 16px rgba(57,67,80,0.08); border-color: var(--pink-light); }
+  .card-header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; gap: 16px; }
   .card-header:hover { background: #fdf9fb; }
-
-  .order-name {
-    font-family: 'Playfair Display', serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--navy);
-    min-width: 160px;
-  }
-
-  .order-meta {
-    font-size: 0.72rem;
-    color: var(--muted);
-    font-weight: 400;
-    display: flex;
-    gap: 16px;
-    flex: 1;
-  }
-
-  .order-meta span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .badge {
-    font-size: 0.62rem;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  .badge-type {
-    background: #eef0eb;
-    color: var(--green);
-  }
-  .badge-design {
-    background: #faeef2;
-    color: var(--pink-dark);
-  }
-
-  .chevron {
-    color: var(--muted);
-    font-size: 0.75rem;
-    transition: transform 0.2s;
-    flex-shrink: 0;
-  }
+  .order-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--navy); min-width: 160px; }
+  .order-meta { font-size: 0.72rem; color: var(--muted); font-weight: 400; display: flex; gap: 16px; flex: 1; }
+  .order-meta span { display: flex; align-items: center; gap: 4px; }
+  .badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .badge-type { background: #eef0eb; color: var(--green); }
+  .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; }
   .order-card.open .chevron { transform: rotate(180deg); }
-
-  .card-body {
-    display: none;
-    padding: 0 20px 18px;
-    border-top: 1px solid var(--border);
-  }
+  .card-body { display: none; padding: 0 20px 18px; border-top: 1px solid var(--border); }
   .order-card.open .card-body { display: block; }
-
-  .section-label {
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--muted);
-    font-weight: 600;
-    margin: 14px 0 6px;
-  }
-
-  .custom-info-box {
-    background: #f8f5f2;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 12px 14px;
-    font-size: 0.82rem;
-    line-height: 1.7;
-    color: var(--text);
-    white-space: pre-wrap;
-    font-family: 'Montserrat', sans-serif;
-  }
-
-  .folder-path {
-    font-size: 0.72rem;
-    color: var(--muted);
-    font-family: 'Courier New', monospace;
-    word-break: break-all;
-    background: #f8f5f2;
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-  }
-
-  .actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 18px;
-    border-radius: 4px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    cursor: pointer;
-    border: none;
-    transition: all 0.15s;
-    position: relative;
-  }
-
-  .btn-primary {
-    background: var(--navy);
-    color: white;
-  }
+  .section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin: 14px 0 6px; }
+  .custom-info-box { background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-size: 0.82rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; font-family: 'Montserrat', sans-serif; }
+  .folder-path { font-size: 0.72rem; color: var(--muted); font-family: 'Courier New', monospace; word-break: break-all; background: #f8f5f2; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); }
+  .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
+  .btn-primary { background: var(--navy); color: white; }
   .btn-primary:hover { background: #2a3140; }
-
-  .btn-secondary {
-    background: white;
-    color: var(--navy);
-    border: 1.5px solid var(--navy);
-  }
+  .btn-secondary { background: white; color: var(--navy); border: 1.5px solid var(--navy); }
   .btn-secondary:hover { background: var(--navy); color: white; }
-
-  .btn-accent {
-    background: var(--pink-dark);
-    color: white;
-  }
+  .btn-accent { background: var(--pink-dark); color: white; }
   .btn-accent:hover { background: #c45e76; }
-
-  .btn.copied {
-    background: var(--green) !important;
-    border-color: var(--green) !important;
-    color: white !important;
-  }
-
-  .btn svg {
-    width: 13px; height: 13px;
-    fill: currentColor;
-    flex-shrink: 0;
-  }
-
-  .order-link {
-    font-size: 0.7rem;
-    color: var(--pink-dark);
-    text-decoration: none;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-  }
-  .order-link:hover { text-decoration: underline; }
-
-  .empty {
-    text-align: center;
-    padding: 60px;
-    color: var(--muted);
-    font-size: 0.85rem;
-  }
-
-  .row-num {
-    font-size: 0.65rem;
-    color: #ccc;
-    font-weight: 500;
-    min-width: 24px;
-    text-align: right;
-    flex-shrink: 0;
-  }
+  .btn.copied { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
+  .row-num { font-size: 0.65rem; color: #ccc; font-weight: 500; min-width: 24px; text-align: right; flex-shrink: 0; }
+  .empty { text-align: center; padding: 60px; color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -325,26 +74,22 @@
 
 <div class="main">
   <div id="app">
-    <div class="loading-state">
-      <div class="spinner"></div>
-      Loading orders...
-    </div>
+    <div class="loading-state"><div class="spinner"></div>Loading orders...</div>
   </div>
 </div>
 
 <script>
-const SHEET_ID = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
+var SHEET_ID = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
+var ordersData = [];
 
 function setStatus(state) {
-  const dot = document.getElementById('status-dot');
-  dot.className = 'status-dot ' + state;
+  document.getElementById('status-dot').className = 'status-dot ' + state;
 }
 
 function parseCSV(text) {
-  const rows = [];
-  let row = [], field = '', inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i], next = text[i+1];
+  var rows = [], row = [], field = '', inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i], next = text[i+1];
     if (inQuotes) {
       if (ch === '"' && next === '"') { field += '"'; i++; }
       else if (ch === '"') { inQuotes = false; }
@@ -363,120 +108,113 @@ function parseCSV(text) {
   return rows;
 }
 
-async function loadOrders() {
+function loadOrders() {
   setStatus('loading');
-  const app = document.getElementById('app');
+  var app = document.getElementById('app');
   app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
-
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-
-  try {
-    const res = await fetch(url);
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
+  fetch(url).then(function(res) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    const rows = parseCSV(text);
-
-    const orders = [];
-    rows.forEach((row, i) => {
-      const name = row[0]?.trim();
-      const folderLink = row[1]?.trim();
-      const customInfo = row[2]?.trim();
-      const orderLink = row[3]?.trim();
-      const orderNum = row[4]?.trim();
-      const type = row[5]?.trim();
-      const design = row[6]?.trim();
-
+    return res.text();
+  }).then(function(text) {
+    var rows = parseCSV(text);
+    ordersData = [];
+    rows.forEach(function(row, i) {
+      var name = (row[0] || '').trim();
       if (name && name !== 'Name') {
-        orders.push({ name, folderLink, customInfo, orderLink, orderNum, type, design, rowIndex: i + 1 });
+        ordersData.push({
+          name: name,
+          folderLink: (row[1] || '').trim(),
+          customInfo: (row[2] || '').trim(),
+          orderLink: (row[3] || '').trim(),
+          orderNum: (row[4] || '').trim(),
+          type: (row[5] || '').trim(),
+          design: (row[6] || '').trim(),
+          rowIndex: i + 1
+        });
       }
     });
-
-    if (orders.length === 0) {
+    if (ordersData.length === 0) {
       app.innerHTML = '<div class="empty">No orders found.</div>';
       setStatus('error');
       return;
     }
-
     setStatus('loaded');
-    renderOrders(orders);
-  } catch(e) {
+    renderOrders();
+  }).catch(function(e) {
     setStatus('error');
-    app.innerHTML = `<div class="error-state">Could not load sheet. Make sure it's shared as "anyone with link can view."<br><br><small>${e.message}</small></div>`;
-  }
+    app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
+  });
 }
 
-function renderOrders(orders) {
-  const app = document.getElementById('app');
-  let html = `<div class="order-count">${orders.length} order${orders.length !== 1 ? 's' : ''}</div>`;
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-  orders.forEach((o, i) => {
-    const customInfoDisplay = o.customInfo ? o.customInfo.replace(/\\n/g, '\n') : '';
-    html += `
-    <div class="order-card" id="card-${i}">
-      <div class="card-header" onclick="toggleCard(${i})">
-        <span class="row-num">${o.rowIndex}</span>
-        <span class="order-name">${escHtml(o.name)}</span>
-        <div class="order-meta">
-          ${o.type ? `<span><span class="badge badge-type">${escHtml(o.type)}</span></span>` : ''}
-          ${o.design ? `<span><span class="badge badge-design">${escHtml(o.design)}</span></span>` : ''}
-          ${o.orderNum ? `<span>#${escHtml(String(o.orderNum))}</span>` : ''}
-        </div>
-        <span class="chevron">▼</span>
-      </div>
-      <div class="card-body">
-        <div class="section-label">Custom Info</div>
-        <div class="custom-info-box">${escHtml(customInfoDisplay)}</div>
-
-        <div class="section-label">Folder Path</div>
-        <div class="folder-path">${escHtml(o.folderLink || '—')}</div>
-
-        <div class="actions">
-          <button class="btn btn-accent" id="copy-custom-${i}" onclick="copyText('copy-custom-${i}', ${JSON.stringify(customInfoDisplay)})">
-            <svg viewBox="0 0 16 16"><path d="M4 2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zm0 1a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V4a1 1 0 00-1-1H4z"/></svg>
-            Copy Custom Info
-          </button>
-          <button class="btn btn-primary" id="copy-folder-${i}" onclick="copyText('copy-folder-${i}', ${JSON.stringify(o.folderLink || '')})">
-            <svg viewBox="0 0 16 16"><path d="M2 3.5A1.5 1.5 0 013.5 2h3.672a1.5 1.5 0 011.06.44l.828.828A1.5 1.5 0 0010.12 3.75H12.5A1.5 1.5 0 0114 5.25V12.5A1.5 1.5 0 0112.5 14h-9A1.5 1.5 0 012 12.5v-9z"/></svg>
-            Copy Folder Path
-          </button>
-          ${o.orderLink ? `<a class="btn btn-secondary" href="${escHtml(o.orderLink)}" target="_blank">View Etsy Order ↗</a>` : ''}
-        </div>
-      </div>
-    </div>`;
+function renderOrders() {
+  var app = document.getElementById('app');
+  var html = '<div class="order-count">' + ordersData.length + ' order' + (ordersData.length !== 1 ? 's' : '') + '</div>';
+  ordersData.forEach(function(o, i) {
+    html += '<div class="order-card" id="card-' + i + '">';
+    html += '<div class="card-header" onclick="toggleCard(' + i + ')">';
+    html += '<span class="row-num">' + o.rowIndex + '</span>';
+    html += '<span class="order-name">' + esc(o.name) + '</span>';
+    html += '<div class="order-meta">';
+    if (o.type) html += '<span><span class="badge badge-type">' + esc(o.type) + '</span></span>';
+    if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
+    if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
+    html += '</div><span class="chevron">▼</span></div>';
+    html += '<div class="card-body">';
+    html += '<div class="section-label">Custom Info</div>';
+    html += '<div class="custom-info-box">' + esc(o.customInfo) + '</div>';
+    html += '<div class="section-label">Folder Path</div>';
+    html += '<div class="folder-path">' + esc(o.folderLink || '—') + '</div>';
+    html += '<div class="actions">';
+    html += '<button class="btn btn-accent" id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
+    html += '<button class="btn btn-primary" id="cf-' + i + '" onclick="copyField(' + i + ',\'folder\')">Copy Folder Path</button>';
+    if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order ↗</a>';
+    html += '</div></div></div>';
   });
-
   app.innerHTML = html;
 }
 
 function toggleCard(i) {
-  const card = document.getElementById('card-' + i);
-  card.classList.toggle('open');
+  document.getElementById('card-' + i).classList.toggle('open');
 }
 
-async function copyText(btnId, text) {
+function copyField(i, field) {
+  var o = ordersData[i];
+  var text = field === 'custom' ? o.customInfo : o.folderLink;
+  var btnId = field === 'custom' ? 'cc-' + i : 'cf-' + i;
   if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
-    const btn = document.getElementById(btnId);
-    const orig = btn.innerHTML;
-    btn.classList.add('copied');
-    btn.innerHTML = '✓ Copied!';
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      btn.innerHTML = orig;
-    }, 1800);
-  } catch(e) {
-    alert('Copy failed — please copy manually.');
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  ta.style.top = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (ok) {
+    flashCopied(btnId);
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); });
   }
 }
 
-function escHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function flashCopied(btnId) {
+  var btn = document.getElementById(btnId);
+  if (!btn) return;
+  var orig = btn.textContent;
+  btn.classList.add('copied');
+  btn.textContent = '✓ Copied!';
+  setTimeout(function() {
+    btn.classList.remove('copied');
+    btn.textContent = orig;
+  }, 1800);
 }
 
 loadOrders();
