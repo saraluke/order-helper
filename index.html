@@ -28,13 +28,21 @@
   .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--pink-dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; font-weight: 500; }
-  .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s; }
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: auto; }
+  .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+  .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
+  .filter-btn.active { background: var(--navy); border-color: var(--navy); color: white; }
+  .filter-btn.done-toggle.active { background: var(--muted); border-color: var(--muted); color: white; }
+  .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
   .order-card:hover { box-shadow: 0 4px 16px rgba(57,67,80,0.08); border-color: var(--pink-light); }
+  .order-card.done { opacity: 0.45; }
+  .order-card.done .order-name { text-decoration: line-through; color: var(--muted); }
+  .order-card.hidden { display: none; }
   .card-header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; gap: 16px; }
   .card-header:hover { background: #fdf9fb; }
-  .order-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--navy); min-width: 160px; }
-  .order-meta { font-size: 0.72rem; color: var(--muted); font-weight: 400; display: flex; gap: 16px; flex: 1; }
+  .order-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--navy); min-width: 160px; transition: all 0.2s; }
+  .order-meta { font-size: 0.72rem; color: var(--muted); font-weight: 400; display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
   .order-meta span { display: flex; align-items: center; gap: 4px; }
   .badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-type { background: #eef0eb; color: var(--green); }
@@ -54,8 +62,13 @@
   .btn-secondary:hover { background: var(--navy); color: white; }
   .btn-accent { background: var(--pink-dark); color: white; }
   .btn-accent:hover { background: #c45e76; }
+  .btn-done { background: white; color: var(--muted); border: 1.5px solid var(--border); }
+  .btn-done:hover { background: #f0f0ee; }
+  .btn-undone { background: var(--green); color: white; border: 1.5px solid var(--green); }
+  .btn-undone:hover { background: #4a5442; }
   .btn.copied { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
   .row-num { font-size: 0.65rem; color: #ccc; font-weight: 500; min-width: 24px; text-align: right; flex-shrink: 0; }
+  .date-label { font-size: 0.65rem; color: var(--muted); }
   .empty { text-align: center; padding: 60px; color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
@@ -73,6 +86,13 @@
 </header>
 
 <div class="main">
+  <div id="toolbar" style="display:none">
+    <div class="toolbar">
+      <span class="order-count" id="order-count"></span>
+      <div id="design-filters"></div>
+      <button class="filter-btn done-toggle" id="done-toggle" onclick="toggleShowDone()">Show Completed</button>
+    </div>
+  </div>
   <div id="app">
     <div class="loading-state"><div class="spinner"></div>Loading orders...</div>
   </div>
@@ -81,10 +101,15 @@
 <script>
 var SHEET_ID = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
 var ordersData = [];
+var doneOrders = {};
+var activeFilter = 'all';
+var showDone = false;
 
-function setStatus(state) {
-  document.getElementById('status-dot').className = 'status-dot ' + state;
-}
+try { var saved = localStorage.getItem('slc-done'); if (saved) doneOrders = JSON.parse(saved); } catch(e) {}
+
+function saveDone() { try { localStorage.setItem('slc-done', JSON.stringify(doneOrders)); } catch(e) {} }
+
+function setStatus(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
 
 function parseCSV(text) {
   var rows = [], row = [], field = '', inQuotes = false;
@@ -108,9 +133,23 @@ function parseCSV(text) {
   return rows;
 }
 
+function parseDate(str) {
+  if (!str) return 0;
+  var d = new Date(str);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  var d = new Date(str);
+  if (isNaN(d.getTime())) return '';
+  return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+}
+
 function loadOrders() {
   setStatus('loading');
   var app = document.getElementById('app');
+  document.getElementById('toolbar').style.display = 'none';
   app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
   var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
   fetch(url).then(function(res) {
@@ -123,6 +162,7 @@ function loadOrders() {
       var name = (row[0] || '').trim();
       if (name && name !== 'Name') {
         ordersData.push({
+          id: (row[4] || '').trim() || ('row-' + i),
           name: name,
           folderLink: (row[1] || '').trim(),
           customInfo: (row[2] || '').trim(),
@@ -130,21 +170,67 @@ function loadOrders() {
           orderNum: (row[4] || '').trim(),
           type: (row[5] || '').trim(),
           design: (row[6] || '').trim(),
+          orderDate: (row[9] || '').trim(),
           rowIndex: i + 1
         });
       }
     });
+    ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
     if (ordersData.length === 0) {
       app.innerHTML = '<div class="empty">No orders found.</div>';
       setStatus('error');
       return;
     }
     setStatus('loaded');
+    buildFilters();
     renderOrders();
+    document.getElementById('toolbar').style.display = 'block';
   }).catch(function(e) {
     setStatus('error');
     app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
   });
+}
+
+function buildFilters() {
+  var designs = {};
+  ordersData.forEach(function(o) { if (o.design) designs[o.design] = true; });
+  var keys = Object.keys(designs).sort();
+  var html = '<button class="filter-btn active" id="filter-all" onclick="setFilter(\'all\')">All</button>';
+  keys.forEach(function(d) {
+    html += '<button class="filter-btn" id="filter-' + esc(d) + '" onclick="setFilter(\'' + esc(d) + '\')">' + esc(d) + '</button>';
+  });
+  document.getElementById('design-filters').innerHTML = html;
+}
+
+function setFilter(design) {
+  activeFilter = design;
+  document.querySelectorAll('#design-filters .filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  var btn = document.getElementById('filter-' + (design === 'all' ? 'all' : esc(design)));
+  if (btn) btn.classList.add('active');
+  applyVisibility();
+}
+
+function toggleShowDone() {
+  showDone = !showDone;
+  var btn = document.getElementById('done-toggle');
+  btn.classList.toggle('active', showDone);
+  btn.textContent = showDone ? 'Hide Completed' : 'Show Completed';
+  applyVisibility();
+}
+
+function applyVisibility() {
+  var pending = 0, doneCount = 0;
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card) return;
+    var isDone = !!doneOrders[o.id];
+    var matchesFilter = activeFilter === 'all' || o.design === activeFilter;
+    var show = matchesFilter && (!isDone || showDone);
+    card.classList.toggle('hidden', !show);
+    if (matchesFilter) { isDone ? doneCount++ : pending++; }
+  });
+  document.getElementById('order-count').textContent =
+    pending + ' pending · ' + doneCount + ' completed';
 }
 
 function esc(str) {
@@ -153,9 +239,10 @@ function esc(str) {
 
 function renderOrders() {
   var app = document.getElementById('app');
-  var html = '<div class="order-count">' + ordersData.length + ' order' + (ordersData.length !== 1 ? 's' : '') + '</div>';
+  var html = '';
   ordersData.forEach(function(o, i) {
-    html += '<div class="order-card" id="card-' + i + '">';
+    var isDone = !!doneOrders[o.id];
+    html += '<div class="order-card' + (isDone ? ' done' : '') + '" id="card-' + i + '">';
     html += '<div class="card-header" onclick="toggleCard(' + i + ')">';
     html += '<span class="row-num">' + o.rowIndex + '</span>';
     html += '<span class="order-name">' + esc(o.name) + '</span>';
@@ -163,6 +250,7 @@ function renderOrders() {
     if (o.type) html += '<span><span class="badge badge-type">' + esc(o.type) + '</span></span>';
     if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
     if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
+    if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
     html += '</div><span class="chevron">▼</span></div>';
     html += '<div class="card-body">';
     html += '<div class="section-label">Custom Info</div>';
@@ -172,14 +260,41 @@ function renderOrders() {
     html += '<div class="actions">';
     html += '<button class="btn btn-accent" id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
     html += '<button class="btn btn-primary" id="cf-' + i + '" onclick="copyField(' + i + ',\'folder\')">Copy Folder Path</button>';
-    if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order ↗</a>';
+    if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order</a>';
+    if (!isDone) {
+      html += '<button class="btn btn-done" id="cd-' + i + '" onclick="markDone(' + i + ')">Mark Complete</button>';
+    } else {
+      html += '<button class="btn btn-undone" id="cd-' + i + '" onclick="markUndone(' + i + ')">Undo Complete</button>';
+    }
     html += '</div></div></div>';
   });
-  app.innerHTML = html;
+  app.innerHTML = html || '<div class="empty">No orders found.</div>';
+  applyVisibility();
 }
 
-function toggleCard(i) {
-  document.getElementById('card-' + i).classList.toggle('open');
+function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
+
+function markDone(i) {
+  var o = ordersData[i];
+  doneOrders[o.id] = true;
+  saveDone();
+  var card = document.getElementById('card-' + i);
+  card.classList.add('done');
+  card.classList.remove('open');
+  var btn = document.getElementById('cd-' + i);
+  if (btn) { btn.className = 'btn btn-undone'; btn.textContent = 'Undo Complete'; btn.onclick = function(){ markUndone(i); }; }
+  applyVisibility();
+}
+
+function markUndone(i) {
+  var o = ordersData[i];
+  delete doneOrders[o.id];
+  saveDone();
+  var card = document.getElementById('card-' + i);
+  card.classList.remove('done');
+  var btn = document.getElementById('cd-' + i);
+  if (btn) { btn.className = 'btn btn-done'; btn.textContent = 'Mark Complete'; btn.onclick = function(){ markDone(i); }; }
+  applyVisibility();
 }
 
 function copyField(i, field) {
@@ -198,11 +313,8 @@ function copyField(i, field) {
   var ok = false;
   try { ok = document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(ta);
-  if (ok) {
-    flashCopied(btnId);
-  } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); });
-  }
+  if (ok) { flashCopied(btnId); }
+  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); }); }
 }
 
 function flashCopied(btnId) {
@@ -211,10 +323,7 @@ function flashCopied(btnId) {
   var orig = btn.textContent;
   btn.classList.add('copied');
   btn.textContent = '✓ Copied!';
-  setTimeout(function() {
-    btn.classList.remove('copied');
-    btn.textContent = orig;
-  }, 1800);
+  setTimeout(function() { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
 }
 
 loadOrders();
