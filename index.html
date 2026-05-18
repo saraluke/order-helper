@@ -24,7 +24,6 @@
   .status-dot.loaded { background: #7cb87c; }
   .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
   .status-dot.error { background: #c97070; }
-  .sync-label { font-size: 0.65rem; color: var(--pink-dark); letter-spacing: 0.06em; opacity: 0.8; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
   .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
@@ -82,7 +81,6 @@
     <div class="subtitle">Order Helper</div>
   </div>
   <div class="header-right">
-    <span class="sync-label" id="sync-label"></span>
     <span class="status-dot" id="status-dot"></span>
     <button id="refresh-btn" onclick="loadOrders()">↺ Refresh</button>
   </div>
@@ -103,41 +101,15 @@
 
 <script>
 var SHEET_ID = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
-var STORAGE_KEY = 'slc_done_orders_v2';
 var ordersData = [];
 var doneOrders = {};
 var activeFilter = 'all';
 var showDone = false;
 
-// ── Cross-device persistent storage ──────────────────────────────────────────
-async function loadDoneOrders() {
-  setSyncLabel('Syncing...');
-  try {
-    var result = await window.storage.get(STORAGE_KEY);
-    doneOrders = result ? JSON.parse(result.value) : {};
-    setSyncLabel('Synced');
-  } catch(e) {
-    doneOrders = {};
-    setSyncLabel('');
-  }
-}
+try { var saved = localStorage.getItem('slc-done'); if (saved) doneOrders = JSON.parse(saved); } catch(e) {}
 
-async function saveDoneOrders() {
-  try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(doneOrders));
-    setSyncLabel('Saved');
-  } catch(e) {
-    setSyncLabel('Save failed');
-    console.error('Storage error:', e);
-  }
-}
+function saveDone() { try { localStorage.setItem('slc-done', JSON.stringify(doneOrders)); } catch(e) {} }
 
-function setSyncLabel(msg) {
-  var el = document.getElementById('sync-label');
-  if (el) el.textContent = msg;
-}
-
-// ── Sheet loading ─────────────────────────────────────────────────────────────
 function setStatus(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
 
 function parseCSV(text) {
@@ -175,15 +147,11 @@ function formatDate(str) {
   return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
 
-async function loadOrders() {
+function loadOrders() {
   setStatus('loading');
   var app = document.getElementById('app');
   document.getElementById('toolbar').style.display = 'none';
   app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
-
-  // Load completed status from persistent storage first
-  await loadDoneOrders();
-
   var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
   fetch(url).then(function(res) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -307,10 +275,10 @@ function renderOrders() {
 
 function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
 
-async function markDone(i) {
+function markDone(i) {
   var o = ordersData[i];
   doneOrders[o.id] = true;
-  await saveDoneOrders();
+  saveDone();
   var card = document.getElementById('card-' + i);
   card.classList.add('done');
   card.classList.remove('open');
@@ -319,10 +287,10 @@ async function markDone(i) {
   applyVisibility();
 }
 
-async function markUndone(i) {
+function markUndone(i) {
   var o = ordersData[i];
   delete doneOrders[o.id];
-  await saveDoneOrders();
+  saveDone();
   var card = document.getElementById('card-' + i);
   card.classList.remove('done');
   var btn = document.getElementById('cd-' + i);
