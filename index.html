@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/x-icon" href="/favicon.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sara Luke Creative — Order Helper</title>
+<title>Sara Luke Creative — Etsy Orders</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,6 +11,10 @@
     --pink-light: #F3C4D6; --navy: #394350; --pink-dark: #D56D85;
     --green: #58634F; --tangerine: #E49855; --bg: #faf8f6;
     --card: #ffffff; --border: #e8e0d8; --text: #2a2420; --muted: #8a7f78;
+    --status-proof: #7b9cc4;
+    --status-approved: #9b7fc4;
+    --status-production: #c4a44a;
+    --status-complete: #58634F;
   }
   body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   header { background: var(--navy); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--pink-dark); }
@@ -20,313 +23,339 @@
   .header-right { display: flex; align-items: center; gap: 12px; }
   #refresh-btn { background: transparent; border: 1px solid var(--pink-dark); color: var(--pink-light); padding: 6px 14px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
   #refresh-btn:hover { background: var(--pink-dark); color: white; }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; display: inline-block; }
-  .status-dot.loaded { background: #7cb87c; }
-  .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
-  .status-dot.error { background: #c97070; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
-  .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
-  .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--pink-dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-  .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: auto; }
-  .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
-  .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
-  .filter-btn.active { background: var(--navy); border-color: var(--navy); color: white; }
-  .filter-btn.done-toggle.active { background: var(--muted); border-color: var(--muted); color: white; }
-  .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
-  .order-card:hover { box-shadow: 0 4px 16px rgba(57,67,80,0.08); border-color: var(--pink-light); }
-  .order-card.done { opacity: 0.45; }
-  .order-card.done .order-name { text-decoration: line-through; color: var(--muted); }
-  .order-card.hidden { display: none; }
-  .card-header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; gap: 16px; }
-  .card-header:hover { background: #fdf9fb; }
-  .order-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--navy); min-width: 160px; transition: all 0.2s; }
-  .order-meta { font-size: 0.72rem; color: var(--muted); font-weight: 400; display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
-  .order-meta span { display: flex; align-items: center; gap: 4px; }
-  .badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-  .badge-type { background: #eef0eb; color: var(--green); }
-  .badge-design { background: #faeef2; color: var(--pink-dark); }
-  .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; }
-  .order-card.open .chevron { transform: rotate(180deg); }
-  .card-body { display: none; padding: 0 20px 18px; border-top: 1px solid var(--border); }
-  .order-card.open .card-body { display: block; }
-  .section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin: 14px 0 6px; }
-  .custom-info-box { background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-size: 0.82rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; font-family: 'Montserrat', sans-serif; }
-  .folder-path { font-size: 0.72rem; color: var(--muted); font-family: 'Courier New', monospace; word-break: break-all; background: #f8f5f2; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); }
-  .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
-  .btn-primary { background: var(--navy); color: white; }
-  .btn-primary:hover { background: #2a3140; }
-  .btn-secondary { background: white; color: var(--navy); border: 1.5px solid var(--navy); }
-  .btn-secondary:hover { background: var(--navy); color: white; }
-  .btn-accent { background: var(--pink-dark); color: white; }
-  .btn-accent:hover { background: #c45e76; }
-  .btn-done { background: white; color: var(--muted); border: 1.5px solid var(--border); }
-  .btn-done:hover { background: #f0f0ee; }
-  .btn-undone { background: var(--green); color: white; border: 1.5px solid var(--green); }
-  .btn-undone:hover { background: #4a5442; }
-  .btn.copied { background: var(--green) !important; border-color: var(--green) !important; color: white !important; }
-  .row-num { font-size: 0.65rem; color: #ccc; font-weight: 500; min-width: 24px; text-align: right; flex-shrink: 0; }
-  .date-label { font-size: 0.65rem; color: var(--muted); }
-  .empty { text-align: center; padding: 60px; color: var(--muted); font-size: 0.85rem; }
+  .sync-status { font-size: 0.65rem; color: var(--pink-dark); letter-spacing: 0.06em; opacity: 0.8; }
+  .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+  .filter-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+  .select-all-wrap { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 0.72rem; color: var(--muted); cursor: pointer; }
+  .select-all-wrap input[type=checkbox] { accent-color: var(--navy); width: 15px; height: 15px; cursor: pointer; }
+  .bulk-bar { background: var(--navy); color: white; padding: 12px 24px; display: flex; align-items: center; gap: 12px; font-size: 0.75rem; flex-wrap: wrap; margin-bottom: 18px; border-radius: 4px; }
+  .bulk-bar.hidden { display: none; }
+  .bulk-bar span { margin-right: auto; }
+  .bulk-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 5px 12px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+  .bulk-btn:hover { background: rgba(255,255,255,0.25); }
+  .order-grid { display: grid; gap: 14px; }
+  .order-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 6px; padding: 18px 20px; display: grid; grid-template-columns: 24px 1fr auto; gap: 14px; align-items: start; transition: border-color 0.2s, box-shadow 0.2s; }
+  .order-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .order-card.status-proof { border-left-color: var(--status-proof); }
+  .order-card.status-approved { border-left-color: var(--status-approved); }
+  .order-card.status-production { border-left-color: var(--status-production); }
+  .order-card.status-complete { border-left-color: var(--status-complete); opacity: 0.7; }
+  .card-check { padding-top: 3px; }
+  .card-check input[type=checkbox] { accent-color: var(--navy); width: 15px; height: 15px; cursor: pointer; }
+  .card-body { min-width: 0; }
+  .order-meta { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .order-num { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--navy); font-weight: 600; }
+  .order-name { font-size: 0.78rem; color: var(--muted); }
+  .order-detail { font-size: 0.78rem; color: var(--text); margin-bottom: 4px; }
+  .order-detail strong { color: var(--navy); font-weight: 600; }
+  .note-display { font-size: 0.72rem; color: var(--tangerine); font-style: italic; margin-top: 6px; }
+  .card-actions { display: flex; flex-direction: column; gap: 7px; align-items: flex-end; }
+  .action-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .btn { padding: 5px 11px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: 1px solid; transition: all 0.18s; white-space: nowrap; }
+  .btn-copy { background: white; border-color: var(--border); color: var(--navy); }
+  .btn-copy:hover { background: var(--navy); color: white; border-color: var(--navy); }
+  .btn-copy.copied { background: var(--green); color: white; border-color: var(--green); }
+  .btn-link { background: white; border-color: var(--border); color: var(--muted); text-decoration: none; display: inline-block; }
+  .btn-link:hover { border-color: var(--navy); color: var(--navy); }
+  .status-btns { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; margin-top: 4px; }
+  .sbtn { padding: 4px 9px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.6rem; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; border: 1px solid; transition: all 0.18s; }
+  .sbtn-proof { border-color: var(--status-proof); color: var(--status-proof); background: white; }
+  .sbtn-proof.active, .sbtn-proof:hover { background: var(--status-proof); color: white; }
+  .sbtn-approved { border-color: var(--status-approved); color: var(--status-approved); background: white; }
+  .sbtn-approved.active, .sbtn-approved:hover { background: var(--status-approved); color: white; }
+  .sbtn-production { border-color: var(--status-production); color: var(--status-production); background: white; }
+  .sbtn-production.active, .sbtn-production:hover { background: var(--status-production); color: white; }
+  .sbtn-complete { border-color: var(--status-complete); color: var(--status-complete); background: white; }
+  .sbtn-complete.active, .sbtn-complete:hover { background: var(--status-complete); color: white; }
+  .add-order-form { background: white; border: 1px dashed var(--border); border-radius: 6px; padding: 20px; margin-bottom: 18px; display: none; }
+  .add-order-form.open { display: block; }
+  .form-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .form-row input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.78rem; color: var(--text); }
+  .form-actions { display: flex; gap: 8px; }
+  .btn-primary { background: var(--navy); color: white; border-color: var(--navy); padding: 8px 18px; font-size: 0.72rem; }
+  .btn-primary:hover { background: #2a3240; }
+  .btn-cancel { background: white; color: var(--muted); border-color: var(--border); padding: 8px 18px; font-size: 0.72rem; }
+  .add-btn { background: var(--pink-dark); color: white; border: none; padding: 8px 16px; border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
+  .add-btn:hover { background: #c05c74; }
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.85rem; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: white; border-radius: 6px; padding: 28px; width: 380px; max-width: 90vw; }
+  .modal h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; margin-bottom: 6px; color: var(--navy); }
+  .modal p { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
+  .modal textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 3px; font-family: 'Montserrat', sans-serif; font-size: 0.8rem; min-height: 80px; resize: vertical; margin-bottom: 14px; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .loading { text-align: center; padding: 60px; color: var(--muted); font-size: 0.85rem; }
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <h1>Sara Luke Creative</h1>
-    <div class="subtitle">Order Helper</div>
+    <div class="subtitle">Sara Luke Creative</div>
+    <h1>Etsy Orders</h1>
   </div>
   <div class="header-right">
-    <span class="status-dot" id="status-dot"></span>
-    <button id="refresh-btn" onclick="loadOrders()">↺ Refresh</button>
+    <span class="sync-status" id="sync-status">Loading...</span>
+    <button id="refresh-btn" onclick="loadOrders()">Refresh</button>
   </div>
 </header>
 
 <div class="main">
-  <div id="toolbar" style="display:none">
-    <div class="toolbar">
-      <span class="order-count" id="order-count"></span>
-      <div id="design-filters"></div>
-      <button class="filter-btn done-toggle" id="done-toggle" onclick="toggleShowDone()">Show Completed</button>
+  <div style="display:flex; gap:10px; margin-bottom:18px; align-items:center;">
+    <button class="add-btn" onclick="toggleAddForm()">+ Add Order</button>
+  </div>
+
+  <div class="add-order-form" id="add-form">
+    <div class="form-row">
+      <input id="f-num" placeholder="Order # (e.g. 1234567890)" />
+      <input id="f-name" placeholder="Customer Name" />
+      <input id="f-item" placeholder="Item / Product" />
+      <input id="f-personalization" placeholder="Personalization text" />
+      <input id="f-url" placeholder="Order URL (optional)" />
+      <input id="f-message-url" placeholder="Message thread URL (optional)" />
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addOrder()">Add Order</button>
+      <button class="btn btn-cancel" onclick="toggleAddForm()">Cancel</button>
     </div>
   </div>
-  <div id="app">
-    <div class="loading-state"><div class="spinner"></div>Loading orders...</div>
+
+  <div class="toolbar">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-filter="proof" onclick="setFilter('proof',this)">Proof Sent</button>
+    <button class="filter-btn" data-filter="approved" onclick="setFilter('approved',this)">Approved</button>
+    <button class="filter-btn" data-filter="production" onclick="setFilter('production',this)">In Production</button>
+    <button class="filter-btn" data-filter="complete" onclick="setFilter('complete',this)">Completed</button>
+    <button class="filter-btn" data-filter="none" onclick="setFilter('none',this)">No Status</button>
+    <div class="select-all-wrap">
+      <input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)" />
+      <label for="select-all">Select all visible</label>
+    </div>
+  </div>
+
+  <div class="bulk-bar hidden" id="bulk-bar">
+    <span id="bulk-count">0 selected</span>
+    <button class="bulk-btn" onclick="bulkStatus('proof')">Proof Sent</button>
+    <button class="bulk-btn" onclick="bulkStatus('approved')">Approved</button>
+    <button class="bulk-btn" onclick="bulkStatus('production')">Sent to Production</button>
+    <button class="bulk-btn" onclick="bulkStatus('complete')">Complete</button>
+    <button class="bulk-btn" style="background:rgba(200,80,80,0.3)" onclick="clearSelected()">Clear Selection</button>
+  </div>
+
+  <div id="order-grid" class="order-grid">
+    <div class="loading">Loading your orders...</div>
+  </div>
+</div>
+
+<!-- Note modal -->
+<div class="modal-overlay hidden" id="note-modal">
+  <div class="modal">
+    <h3>Add a Note</h3>
+    <p>Optional — add a note for this production batch (e.g. date sent, rush, special instructions).</p>
+    <textarea id="modal-note" placeholder="e.g. Sent to production May 17, rush order"></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="closeModal(false)">Skip</button>
+      <button class="btn btn-primary" onclick="closeModal(true)">Save Note</button>
+    </div>
   </div>
 </div>
 
 <script>
-var SHEET_ID = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
-var ordersData = [];
-var doneOrders = {};
-var activeFilter = 'all';
-var showDone = false;
+const STORAGE_KEY = 'etsy_orders_v2';
+let orders = [];
+let currentFilter = 'all';
+let pendingModalResolve = null;
 
-try { var saved = localStorage.getItem('slc-done'); if (saved) doneOrders = JSON.parse(saved); } catch(e) {}
-
-function saveDone() { try { localStorage.setItem('slc-done', JSON.stringify(doneOrders)); } catch(e) {} }
-
-function setStatus(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
-
-function parseCSV(text) {
-  var rows = [], row = [], field = '', inQuotes = false;
-  for (var i = 0; i < text.length; i++) {
-    var ch = text[i], next = text[i+1];
-    if (inQuotes) {
-      if (ch === '"' && next === '"') { field += '"'; i++; }
-      else if (ch === '"') { inQuotes = false; }
-      else { field += ch; }
-    } else {
-      if (ch === '"') { inQuotes = true; }
-      else if (ch === ',') { row.push(field); field = ''; }
-      else if (ch === '\n' || (ch === '\r' && next === '\n')) {
-        row.push(field); field = '';
-        rows.push(row); row = [];
-        if (ch === '\r') i++;
-      } else { field += ch; }
-    }
+// ── Persistent storage (cross-device via Claude storage API) ──────────────────
+async function saveOrders() {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(orders));
+    setSyncStatus('Saved');
+  } catch(e) {
+    setSyncStatus('Save failed');
+    console.error('Storage save error:', e);
   }
-  if (field || row.length) { row.push(field); rows.push(row); }
-  return rows;
 }
 
-function parseDate(str) {
-  if (!str) return 0;
-  var d = new Date(str);
-  return isNaN(d.getTime()) ? 0 : d.getTime();
+async function loadOrders() {
+  setSyncStatus('Syncing...');
+  try {
+    const result = await window.storage.get(STORAGE_KEY);
+    orders = result ? JSON.parse(result.value) : [];
+  } catch(e) {
+    orders = [];
+  }
+  setSyncStatus('Synced');
+  renderOrders();
 }
 
-function formatDate(str) {
-  if (!str) return '';
-  var d = new Date(str);
-  if (isNaN(d.getTime())) return '';
-  return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+function setSyncStatus(msg) {
+  const el = document.getElementById('sync-status');
+  if (el) el.textContent = msg;
 }
 
-function loadOrders() {
-  setStatus('loading');
-  var app = document.getElementById('app');
-  document.getElementById('toolbar').style.display = 'none';
-  app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
-  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
-  fetch(url).then(function(res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.text();
-  }).then(function(text) {
-    var rows = parseCSV(text);
-    ordersData = [];
-    rows.forEach(function(row, i) {
-      var name = (row[0] || '').trim();
-      if (name && name !== 'Name') {
-        ordersData.push({
-          id: (row[4] || '').trim() || ('row-' + i),
-          name: name,
-          folderLink: (row[1] || '').trim(),
-          customInfo: (row[2] || '').trim(),
-          orderLink: (row[3] || '').trim(),
-          orderNum: (row[4] || '').trim(),
-          type: (row[5] || '').trim(),
-          design: (row[6] || '').trim(),
-          orderDate: (row[9] || '').trim(),
-          rowIndex: i + 1
-        });
-      }
-    });
-    ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
-    if (ordersData.length === 0) {
-      app.innerHTML = '<div class="empty">No orders found.</div>';
-      setStatus('error');
-      return;
-    }
-    setStatus('loaded');
-    buildFilters();
-    renderOrders();
-    document.getElementById('toolbar').style.display = 'block';
-  }).catch(function(e) {
-    setStatus('error');
-    app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
-  });
-}
-
-function buildFilters() {
-  var designs = {};
-  ordersData.forEach(function(o) { if (o.design) designs[o.design] = true; });
-  var keys = Object.keys(designs).sort();
-  var html = '<button class="filter-btn active" id="filter-all" onclick="setFilter(\'all\')">All</button>';
-  keys.forEach(function(d) {
-    html += '<button class="filter-btn" id="filter-' + esc(d) + '" onclick="setFilter(\'' + esc(d) + '\')">' + esc(d) + '</button>';
-  });
-  document.getElementById('design-filters').innerHTML = html;
-}
-
-function setFilter(design) {
-  activeFilter = design;
-  document.querySelectorAll('#design-filters .filter-btn').forEach(function(b) { b.classList.remove('active'); });
-  var btn = document.getElementById('filter-' + (design === 'all' ? 'all' : esc(design)));
-  if (btn) btn.classList.add('active');
-  applyVisibility();
-}
-
-function toggleShowDone() {
-  showDone = !showDone;
-  var btn = document.getElementById('done-toggle');
-  btn.classList.toggle('active', showDone);
-  btn.textContent = showDone ? 'Hide Completed' : 'Show Completed';
-  applyVisibility();
-}
-
-function applyVisibility() {
-  var pending = 0, doneCount = 0;
-  ordersData.forEach(function(o, i) {
-    var card = document.getElementById('card-' + i);
-    if (!card) return;
-    var isDone = !!doneOrders[o.id];
-    var matchesFilter = activeFilter === 'all' || o.design === activeFilter;
-    var show = matchesFilter && (!isDone || showDone);
-    card.classList.toggle('hidden', !show);
-    if (matchesFilter) { isDone ? doneCount++ : pending++; }
-  });
-  document.getElementById('order-count').textContent =
-    pending + ' pending · ' + doneCount + ' completed';
-}
-
-function esc(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
+// ── Rendering ─────────────────────────────────────────────────────────────────
 function renderOrders() {
-  var app = document.getElementById('app');
-  var html = '';
-  ordersData.forEach(function(o, i) {
-    var isDone = !!doneOrders[o.id];
-    html += '<div class="order-card' + (isDone ? ' done' : '') + '" id="card-' + i + '">';
-    html += '<div class="card-header" onclick="toggleCard(' + i + ')">';
-    html += '<span class="row-num">' + o.rowIndex + '</span>';
-    html += '<span class="order-name">' + esc(o.name) + '</span>';
-    html += '<div class="order-meta">';
-    if (o.type) html += '<span><span class="badge badge-type">' + esc(o.type) + '</span></span>';
-    if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
-    if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
-    if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
-    html += '</div><span class="chevron">▼</span></div>';
-    html += '<div class="card-body">';
-    html += '<div class="section-label">Custom Info</div>';
-    html += '<div class="custom-info-box">' + esc(o.customInfo) + '</div>';
-    html += '<div class="section-label">Folder Path</div>';
-    html += '<div class="folder-path">' + esc(o.folderLink || '—') + '</div>';
-    html += '<div class="actions">';
-    html += '<button class="btn btn-accent" id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
-    html += '<button class="btn btn-primary" id="cf-' + i + '" onclick="copyField(' + i + ',\'folder\')">Copy Folder Path</button>';
-    if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order</a>';
-    if (!isDone) {
-      html += '<button class="btn btn-done" id="cd-' + i + '" onclick="markDone(' + i + ')">Mark Complete</button>';
-    } else {
-      html += '<button class="btn btn-undone" id="cd-' + i + '" onclick="markUndone(' + i + ')">Undo Complete</button>';
-    }
-    html += '</div></div></div>';
+  const grid = document.getElementById('order-grid');
+  let visible = orders;
+  if (currentFilter !== 'all') {
+    visible = orders.filter(o =>
+      currentFilter === 'none' ? !o.status : o.status === currentFilter
+    );
+  }
+  if (!visible.length) {
+    grid.innerHTML = '<div class="empty">No orders here yet.</div>';
+    return;
+  }
+  grid.innerHTML = visible.map(o => cardHTML(o)).join('');
+}
+
+function cardHTML(o) {
+  const statusClass = o.status ? 'status-' + o.status : '';
+  return `
+  <div class="order-card ${statusClass}" id="card-${o.id}">
+    <div class="card-check">
+      <input type="checkbox" class="order-check" data-id="${o.id}" onchange="updateBulkBar()" />
+    </div>
+    <div class="card-body">
+      <div class="order-meta">
+        <span class="order-num">${o.num}</span>
+        <span class="order-name">${o.name || ''}</span>
+      </div>
+      ${o.item ? `<div class="order-detail"><strong>Item:</strong> ${o.item}</div>` : ''}
+      ${o.personalization ? `<div class="order-detail"><strong>Personalization:</strong> ${o.personalization}</div>` : ''}
+      ${o.note ? `<div class="note-display">Note: ${o.note}</div>` : ''}
+    </div>
+    <div class="card-actions">
+      <div class="action-row">
+        ${o.personalization ? `<button class="btn btn-copy" onclick="copyText('${escapeAttr(o.personalization)}', this)">Copy Personalization</button>` : ''}
+        ${o.url ? `<a class="btn btn-link" href="${o.url}" target="_blank">View Order</a>` : ''}
+        ${o.messageUrl ? `<a class="btn btn-link" href="${o.messageUrl}" target="_blank">Message Customer</a>` : ''}
+      </div>
+      <div class="status-btns">
+        <button class="sbtn sbtn-proof ${o.status==='proof'?'active':''}" onclick="setStatus('${o.id}','proof')">Proof Sent</button>
+        <button class="sbtn sbtn-approved ${o.status==='approved'?'active':''}" onclick="setStatus('${o.id}','approved')">Approved</button>
+        <button class="sbtn sbtn-production ${o.status==='production'?'active':''}" onclick="setStatus('${o.id}','production')">Production</button>
+        <button class="sbtn sbtn-complete ${o.status==='complete'?'active':''}" onclick="setStatus('${o.id}','complete')">Complete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ── Status ────────────────────────────────────────────────────────────────────
+async function setStatus(id, status) {
+  if (status === 'production') {
+    const note = await promptNote();
+    const o = orders.find(x => x.id === id);
+    if (o) { o.status = status; if (note) o.note = note; }
+  } else {
+    const o = orders.find(x => x.id === id);
+    if (o) o.status = status;
+  }
+  await saveOrders();
+  renderOrders();
+}
+
+async function bulkStatus(status) {
+  const checked = [...document.querySelectorAll('.order-check:checked')].map(c => c.dataset.id);
+  if (!checked.length) return;
+  let note = '';
+  if (status === 'production') note = await promptNote();
+  checked.forEach(id => {
+    const o = orders.find(x => x.id === id);
+    if (o) { o.status = status; if (note) o.note = note; }
   });
-  app.innerHTML = html || '<div class="empty">No orders found.</div>';
-  applyVisibility();
+  await saveOrders();
+  renderOrders();
+  updateBulkBar();
 }
 
-function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
-
-function markDone(i) {
-  var o = ordersData[i];
-  doneOrders[o.id] = true;
-  saveDone();
-  var card = document.getElementById('card-' + i);
-  card.classList.add('done');
-  card.classList.remove('open');
-  var btn = document.getElementById('cd-' + i);
-  if (btn) { btn.className = 'btn btn-undone'; btn.textContent = 'Undo Complete'; btn.onclick = function(){ markUndone(i); }; }
-  applyVisibility();
+// ── Note modal ────────────────────────────────────────────────────────────────
+function promptNote() {
+  return new Promise(resolve => {
+    pendingModalResolve = resolve;
+    document.getElementById('modal-note').value = '';
+    document.getElementById('note-modal').classList.remove('hidden');
+  });
 }
 
-function markUndone(i) {
-  var o = ordersData[i];
-  delete doneOrders[o.id];
-  saveDone();
-  var card = document.getElementById('card-' + i);
-  card.classList.remove('done');
-  var btn = document.getElementById('cd-' + i);
-  if (btn) { btn.className = 'btn btn-done'; btn.textContent = 'Mark Complete'; btn.onclick = function(){ markDone(i); }; }
-  applyVisibility();
+function closeModal(save) {
+  const note = save ? document.getElementById('modal-note').value.trim() : '';
+  document.getElementById('note-modal').classList.add('hidden');
+  if (pendingModalResolve) { pendingModalResolve(note); pendingModalResolve = null; }
 }
 
-function copyField(i, field) {
-  var o = ordersData[i];
-  var text = field === 'custom' ? o.customInfo : o.folderLink;
-  var btnId = field === 'custom' ? 'cc-' + i : 'cf-' + i;
-  if (!text) return;
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.left = '-9999px';
-  ta.style.top = '0';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  var ok = false;
-  try { ok = document.execCommand('copy'); } catch(e) {}
-  document.body.removeChild(ta);
-  if (ok) { flashCopied(btnId); }
-  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); }); }
+// ── Add order ─────────────────────────────────────────────────────────────────
+function toggleAddForm() {
+  document.getElementById('add-form').classList.toggle('open');
 }
 
-function flashCopied(btnId) {
-  var btn = document.getElementById(btnId);
-  if (!btn) return;
-  var orig = btn.textContent;
-  btn.classList.add('copied');
-  btn.textContent = '✓ Copied!';
-  setTimeout(function() { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+async function addOrder() {
+  const num = document.getElementById('f-num').value.trim();
+  if (!num) { alert('Order number is required.'); return; }
+  const order = {
+    id: 'o' + Date.now(),
+    num,
+    name: document.getElementById('f-name').value.trim(),
+    item: document.getElementById('f-item').value.trim(),
+    personalization: document.getElementById('f-personalization').value.trim(),
+    url: document.getElementById('f-url').value.trim(),
+    messageUrl: document.getElementById('f-message-url').value.trim(),
+    status: '',
+    note: ''
+  };
+  orders.unshift(order);
+  await saveOrders();
+  renderOrders();
+  ['f-num','f-name','f-item','f-personalization','f-url','f-message-url'].forEach(id => document.getElementById(id).value = '');
+  toggleAddForm();
 }
 
+// ── Filter ────────────────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+}
+
+// ── Select / bulk ─────────────────────────────────────────────────────────────
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.order-check').forEach(c => c.checked = checked);
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const count = document.querySelectorAll('.order-check:checked').length;
+  const bar = document.getElementById('bulk-bar');
+  document.getElementById('bulk-count').textContent = count + ' selected';
+  bar.classList.toggle('hidden', count === 0);
+}
+
+function clearSelected() {
+  document.querySelectorAll('.order-check').forEach(c => c.checked = false);
+  document.getElementById('select-all').checked = false;
+  updateBulkBar();
+}
+
+// ── Copy ──────────────────────────────────────────────────────────────────────
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
 loadOrders();
 </script>
 </body>
