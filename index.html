@@ -24,6 +24,7 @@
   .status-dot.loaded { background: #7cb87c; }
   .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
   .status-dot.error { background: #c97070; }
+  .sync-label { font-size: 0.65rem; color: var(--pink-dark); letter-spacing: 0.06em; opacity: 0.8; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
   .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
@@ -97,6 +98,7 @@
     <div class="subtitle">Order Helper</div>
   </div>
   <div class="header-right">
+    <span class="sync-label" id="sync-label"></span>
     <span class="status-dot" id="status-dot"></span>
     <button id="refresh-btn" onclick="loadOrders()">↺ Refresh</button>
   </div>
@@ -118,17 +120,65 @@
 </div>
 
 <script>
-var SHEET_ID = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
-var ordersData = [];
-var doneOrders = {};
+var SHEET_ID  = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAzdGz6vXvV-2g2zwQCrWByhI5dWDGxvuthzwTNXpJYpHlMs7G4fhT5r0aREK7Bct/exec';
+var STORAGE_KEY = 'slc_etsy_done';
+
+var ordersData  = [];
+var doneOrders  = {};
 var activeFilter = 'all';
-var showDone = false;
+var showDone    = false;
 
-try { var saved = localStorage.getItem('slc-done'); if (saved) doneOrders = JSON.parse(saved); } catch(e) {}
+// ── Sync helpers ──────────────────────────────────────────────────────────────
+function setSyncLabel(msg) {
+  var el = document.getElementById('sync-label');
+  if (el) el.textContent = msg;
+}
 
-function saveDone() { try { localStorage.setItem('slc-done', JSON.stringify(doneOrders)); } catch(e) {} }
+function scriptURL(params) {
+  var parts = [SCRIPT_URL];
+  var first = true;
+  for (var k in params) {
+    parts.push((first ? '?' : '&') + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+    first = false;
+  }
+  return parts.join('');
+}
 
-function setStatus(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
+function loadDoneOrders(callback) {
+  setSyncLabel('Syncing...');
+  fetch(scriptURL({ action: 'get', key: STORAGE_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.value) {
+        try { doneOrders = JSON.parse(data.value); } catch(e) { doneOrders = {}; }
+      } else {
+        doneOrders = {};
+      }
+      setSyncLabel('Synced');
+      callback();
+    })
+    .catch(function() {
+      // Fall back to localStorage if script unreachable
+      try { var s = localStorage.getItem(STORAGE_KEY); if (s) doneOrders = JSON.parse(s); } catch(e) {}
+      setSyncLabel('Offline');
+      callback();
+    });
+}
+
+function saveDoneOrders() {
+  var val = JSON.stringify(doneOrders);
+  // Optimistic local backup
+  try { localStorage.setItem(STORAGE_KEY, val); } catch(e) {}
+  setSyncLabel('Saving...');
+  fetch(scriptURL({ action: 'set', key: STORAGE_KEY, value: val }))
+    .then(function(r) { return r.json(); })
+    .then(function() { setSyncLabel('Saved'); })
+    .catch(function() { setSyncLabel('Saved locally'); });
+}
+
+// ── Sheet loading ─────────────────────────────────────────────────────────────
+function setDot(state) { document.getElementById('status-dot').className = 'status-dot ' + state; }
 
 function parseCSV(text) {
   var rows = [], row = [], field = '', inQuotes = false;
@@ -166,47 +216,51 @@ function formatDate(str) {
 }
 
 function loadOrders() {
-  setStatus('loading');
+  setDot('loading');
   var app = document.getElementById('app');
   document.getElementById('toolbar').style.display = 'none';
   app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
-  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
-  fetch(url).then(function(res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.text();
-  }).then(function(text) {
-    var rows = parseCSV(text);
-    ordersData = [];
-    rows.forEach(function(row, i) {
-      var name = (row[0] || '').trim();
-      if (name && name !== 'Name') {
-        ordersData.push({
-          id: (row[4] || '').trim() || ('row-' + i),
-          name: name,
-          folderLink: (row[1] || '').trim(),
-          customInfo: (row[2] || '').trim(),
-          orderLink: (row[3] || '').trim(),
-          orderNum: (row[4] || '').trim(),
-          type: (row[5] || '').trim(),
-          design: (row[6] || '').trim(),
-          orderDate: (row[9] || '').trim(),
-          rowIndex: i + 1
-        });
+
+  // Load completed status first, then fetch sheet
+  loadDoneOrders(function() {
+    var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
+    fetch(url).then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    }).then(function(text) {
+      var rows = parseCSV(text);
+      ordersData = [];
+      rows.forEach(function(row, i) {
+        var name = (row[0] || '').trim();
+        if (name && name !== 'Name') {
+          ordersData.push({
+            id: (row[4] || '').trim() || ('row-' + i),
+            name: name,
+            folderLink: (row[1] || '').trim(),
+            customInfo: (row[2] || '').trim(),
+            orderLink: (row[3] || '').trim(),
+            orderNum: (row[4] || '').trim(),
+            type: (row[5] || '').trim(),
+            design: (row[6] || '').trim(),
+            orderDate: (row[9] || '').trim(),
+            rowIndex: i + 1
+          });
+        }
+      });
+      ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
+      if (ordersData.length === 0) {
+        app.innerHTML = '<div class="empty">No orders found.</div>';
+        setDot('error');
+        return;
       }
+      setDot('loaded');
+      buildFilterDropdown();
+      renderOrders();
+      document.getElementById('toolbar').style.display = 'block';
+    }).catch(function(e) {
+      setDot('error');
+      app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
     });
-    ordersData.sort(function(a, b) { return parseDate(a.orderDate) - parseDate(b.orderDate); });
-    if (ordersData.length === 0) {
-      app.innerHTML = '<div class="empty">No orders found.</div>';
-      setStatus('error');
-      return;
-    }
-    setStatus('loaded');
-    buildFilterDropdown();
-    renderOrders();
-    document.getElementById('toolbar').style.display = 'block';
-  }).catch(function(e) {
-    setStatus('error');
-    app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
   });
 }
 
@@ -215,7 +269,6 @@ function buildFilterDropdown() {
   ordersData.forEach(function(o) { if (o.design) designs[o.design] = true; });
   var keys = Object.keys(designs).sort();
   var select = document.getElementById('design-filter');
-  // Clear existing options except the first "All Designs"
   select.innerHTML = '<option value="all">All Designs</option>';
   keys.forEach(function(d) {
     var opt = document.createElement('option');
@@ -268,9 +321,9 @@ function renderOrders() {
     html += '<span class="row-num">' + o.rowIndex + '</span>';
     html += '<span class="order-name">' + esc(o.name) + '</span>';
     html += '<div class="order-meta">';
-    if (o.type) html += '<span><span class="badge badge-type">' + esc(o.type) + '</span></span>';
-    if (o.design) html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
-    if (o.orderNum) html += '<span>#' + esc(o.orderNum) + '</span>';
+    if (o.type)      html += '<span><span class="badge badge-type">'   + esc(o.type)   + '</span></span>';
+    if (o.design)    html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
+    if (o.orderNum)  html += '<span>#' + esc(o.orderNum) + '</span>';
     if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
     html += '</div><span class="chevron">▼</span></div>';
     html += '<div class="card-body">';
@@ -280,10 +333,10 @@ function renderOrders() {
     html += '<div class="folder-path">' + esc(o.folderLink || '—') + '</div>';
     html += '<div class="actions">';
     html += '<button class="btn btn-primary" id="cf-' + i + '" onclick="copyField(' + i + ',\'folder\')">Copy Folder Path</button>';
-    html += '<button class="btn btn-accent" id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
+    html += '<button class="btn btn-accent"  id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
     if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order</a>';
     if (!isDone) {
-      html += '<button class="btn btn-done" id="cd-' + i + '" onclick="markDone(' + i + ')">Mark Complete</button>';
+      html += '<button class="btn btn-done"  id="cd-' + i + '" onclick="markDone('   + i + ')">Mark Complete</button>';
     } else {
       html += '<button class="btn btn-undone" id="cd-' + i + '" onclick="markUndone(' + i + ')">Undo Complete</button>';
     }
@@ -298,7 +351,7 @@ function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('
 function markDone(i) {
   var o = ordersData[i];
   doneOrders[o.id] = true;
-  saveDone();
+  saveDoneOrders();
   var card = document.getElementById('card-' + i);
   card.classList.add('done');
   card.classList.remove('open');
@@ -310,7 +363,7 @@ function markDone(i) {
 function markUndone(i) {
   var o = ordersData[i];
   delete doneOrders[o.id];
-  saveDone();
+  saveDoneOrders();
   var card = document.getElementById('card-' + i);
   card.classList.remove('done');
   var btn = document.getElementById('cd-' + i);
@@ -324,13 +377,8 @@ function copyField(i, field) {
   var btnId = field === 'custom' ? 'cc-' + i : 'cf-' + i;
   if (!text) return;
   var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.left = '-9999px';
-  ta.style.top = '0';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
   var ok = false;
   try { ok = document.execCommand('copy'); } catch(e) {}
   document.body.removeChild(ta);
