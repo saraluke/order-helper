@@ -12,6 +12,7 @@
     --pink-light: #F3C4D6; --navy: #394350; --pink-dark: #D56D85;
     --green: #58634F; --tangerine: #E49855; --bg: #faf8f6;
     --card: #ffffff; --border: #e8e0d8; --text: #2a2420; --muted: #8a7f78;
+    --proof: #7b9cc4;
   }
   body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   header { background: var(--navy); padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--pink-dark); }
@@ -30,42 +31,59 @@
   .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--pink-dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
   .order-count { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-right: auto; }
   .filter-select {
     appearance: none;
     background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a7f78'/%3E%3C/svg%3E") no-repeat right 10px center;
-    border: 1.5px solid var(--border);
-    border-radius: 20px;
-    padding: 5px 28px 5px 14px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    min-width: 160px;
+    border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 28px 5px 14px;
+    font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+    cursor: pointer; transition: all 0.15s; min-width: 160px;
   }
   .filter-select:hover, .filter-select:focus { border-color: var(--navy); color: var(--navy); outline: none; }
-  .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; }
+  .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
   .filter-btn.active { background: var(--muted); border-color: var(--muted); color: white; }
+  .filter-btn.proof-toggle.active { background: var(--proof); border-color: var(--proof); color: white; }
+
+  /* SELECT ALL ROW */
+  .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
+
+  /* SELECTION BANNER */
+  .selection-banner { background: #eef1f5; border: 1px solid #c8d0db; border-radius: 6px; padding: 9px 16px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .selection-banner.visible { display: flex; }
+  .selection-banner-count { font-size: 0.78rem; font-weight: 600; color: var(--navy); margin-right: auto; }
+  .bulk-btn { border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
+  .bulk-btn:hover { opacity: 0.85; }
+  .bulk-proof-btn { background: var(--proof); color: white; }
+  .bulk-complete-btn { background: var(--green); color: white; }
+  .bulk-clear-btn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; border-radius: 4px; }
+  .bulk-clear-btn:hover { border-color: var(--navy) !important; color: var(--navy); opacity: 1; }
+
+  /* ORDER CARDS */
   .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
   .order-card:hover { box-shadow: 0 4px 16px rgba(57,67,80,0.08); border-color: var(--pink-light); }
+  .order-card.proof { border-left: 4px solid var(--proof); }
+  .order-card.proof .order-name { color: var(--proof); }
   .order-card.done { opacity: 0.45; }
   .order-card.done .order-name { text-decoration: line-through; color: var(--muted); }
   .order-card.hidden { display: none; }
-  .card-header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; gap: 16px; }
+  .order-card.selected { border-color: var(--navy); box-shadow: 0 0 0 2px rgba(57,67,80,0.15); }
+  .card-header { padding: 14px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
   .card-header:hover { background: #fdf9fb; }
+  .card-checkbox { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
   .order-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--navy); min-width: 160px; transition: all 0.2s; }
   .order-meta { font-size: 0.72rem; color: var(--muted); font-weight: 400; display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
   .order-meta span { display: flex; align-items: center; gap: 4px; }
   .badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-type { background: #eef0eb; color: var(--green); }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
-  .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; }
+  .badge-proof { background: #e8f0f8; color: var(--proof); }
+  .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
   .order-card.open .chevron { transform: rotate(180deg); }
   .card-body { display: none; padding: 0 20px 18px; border-top: 1px solid var(--border); }
   .order-card.open .card-body { display: block; }
@@ -73,13 +91,17 @@
   .custom-info-box { background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-size: 0.82rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; font-family: 'Montserrat', sans-serif; }
   .folder-path { font-size: 0.72rem; color: var(--muted); font-family: 'Courier New', monospace; word-break: break-all; background: #f8f5f2; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); }
   .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
   .btn-primary { background: var(--navy); color: white; }
   .btn-primary:hover { background: #2a3140; }
   .btn-secondary { background: white; color: var(--navy); border: 1.5px solid var(--navy); }
   .btn-secondary:hover { background: var(--navy); color: white; }
   .btn-accent { background: var(--pink-dark); color: white; }
   .btn-accent:hover { background: #c45e76; }
+  .btn-proof { background: var(--proof); color: white; }
+  .btn-proof:hover { background: #6589b0; }
+  .btn-unproof { background: white; color: var(--proof); border: 1.5px solid var(--proof); }
+  .btn-unproof:hover { background: var(--proof); color: white; }
   .btn-done { background: white; color: var(--muted); border: 1.5px solid var(--border); }
   .btn-done:hover { background: #f0f0ee; }
   .btn-undone { background: var(--green); color: white; border: 1.5px solid var(--green); }
@@ -106,28 +128,49 @@
 
 <div class="main">
   <div id="toolbar" style="display:none">
+
+    <!-- Row 1: count + dropdown + filter toggles -->
     <div class="toolbar">
       <span class="order-count" id="order-count"></span>
       <select class="filter-select" id="design-filter" onchange="setFilter(this.value)">
         <option value="all">All Designs</option>
       </select>
+      <button class="filter-btn proof-toggle" id="proof-toggle" onclick="toggleShowProof()">Show Proof Completed</button>
       <button class="filter-btn" id="done-toggle" onclick="toggleShowDone()">Show Completed</button>
     </div>
+
+    <!-- Selection banner -->
+    <div class="selection-banner" id="selection-banner">
+      <span class="selection-banner-count" id="selection-banner-count">0 orders selected</span>
+      <button class="bulk-btn bulk-proof-btn" onclick="bulkMarkProof()">Proof Completed</button>
+      <button class="bulk-btn bulk-complete-btn" onclick="bulkMarkDone()">Mark Complete</button>
+      <button class="bulk-btn bulk-clear-btn" onclick="clearSelection()">Clear</button>
+    </div>
+
+    <!-- Select all -->
+    <div class="select-all-row">
+      <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)">
+      <label for="select-all-cb">Select all visible</label>
+    </div>
+
   </div>
+
   <div id="app">
     <div class="loading-state"><div class="spinner"></div>Loading orders...</div>
   </div>
 </div>
 
 <script>
-var SHEET_ID  = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
-var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyyAzdGz6vXvV-2g2zwQCrWByhI5dWDGxvuthzwTNXpJYpHlMs7G4fhT5r0aREK7Bct/exec';
+var SHEET_ID    = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
+var SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbyyAzdGz6vXvV-2g2zwQCrWByhI5dWDGxvuthzwTNXpJYpHlMs7G4fhT5r0aREK7Bct/exec';
 var STORAGE_KEY = 'slc_etsy_done';
 
-var ordersData  = [];
-var doneOrders  = {};
+var ordersData   = [];
+var orderStatus  = {}; // values: 'proof' | 'done' | '' (none)
+var selectedIds  = {};
 var activeFilter = 'all';
-var showDone    = false;
+var showDone     = false;
+var showProof    = false;
 
 // ── Sync helpers ──────────────────────────────────────────────────────────────
 function setSyncLabel(msg) {
@@ -145,30 +188,28 @@ function scriptURL(params) {
   return parts.join('');
 }
 
-function loadDoneOrders(callback) {
+function loadStatusData(callback) {
   setSyncLabel('Syncing...');
   fetch(scriptURL({ action: 'get', key: STORAGE_KEY }))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.value) {
-        try { doneOrders = JSON.parse(data.value); } catch(e) { doneOrders = {}; }
+        try { orderStatus = JSON.parse(data.value); } catch(e) { orderStatus = {}; }
       } else {
-        doneOrders = {};
+        orderStatus = {};
       }
       setSyncLabel('Synced');
       callback();
     })
     .catch(function() {
-      // Fall back to localStorage if script unreachable
-      try { var s = localStorage.getItem(STORAGE_KEY); if (s) doneOrders = JSON.parse(s); } catch(e) {}
+      try { var s = localStorage.getItem(STORAGE_KEY); if (s) orderStatus = JSON.parse(s); } catch(e) {}
       setSyncLabel('Offline');
       callback();
     });
 }
 
-function saveDoneOrders() {
-  var val = JSON.stringify(doneOrders);
-  // Optimistic local backup
+function saveStatusData() {
+  var val = JSON.stringify(orderStatus);
   try { localStorage.setItem(STORAGE_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
   fetch(scriptURL({ action: 'set', key: STORAGE_KEY, value: val }))
@@ -217,12 +258,12 @@ function formatDate(str) {
 
 function loadOrders() {
   setDot('loading');
+  selectedIds = {};
   var app = document.getElementById('app');
   document.getElementById('toolbar').style.display = 'none';
   app.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading orders...</div>';
 
-  // Load completed status first, then fetch sheet
-  loadDoneOrders(function() {
+  loadStatusData(function() {
     var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/export?format=csv&gid=0';
     fetch(url).then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -257,6 +298,7 @@ function loadOrders() {
       buildFilterDropdown();
       renderOrders();
       document.getElementById('toolbar').style.display = 'block';
+      updateSelectionUI();
     }).catch(function(e) {
       setDot('error');
       app.innerHTML = '<div class="error-state">Could not load sheet.<br><br><small>' + e.message + '</small></div>';
@@ -272,8 +314,7 @@ function buildFilterDropdown() {
   select.innerHTML = '<option value="all">All Designs</option>';
   keys.forEach(function(d) {
     var opt = document.createElement('option');
-    opt.value = d;
-    opt.textContent = d;
+    opt.value = d; opt.textContent = d;
     select.appendChild(opt);
   });
   select.value = activeFilter;
@@ -281,6 +322,14 @@ function buildFilterDropdown() {
 
 function setFilter(design) {
   activeFilter = design;
+  applyVisibility();
+}
+
+function toggleShowProof() {
+  showProof = !showProof;
+  var btn = document.getElementById('proof-toggle');
+  btn.classList.toggle('active', showProof);
+  btn.textContent = showProof ? 'Hide Proof Completed' : 'Show Proof Completed';
   applyVisibility();
 }
 
@@ -293,18 +342,27 @@ function toggleShowDone() {
 }
 
 function applyVisibility() {
-  var pending = 0, doneCount = 0;
+  var pending = 0, proofCount = 0, doneCount = 0;
   ordersData.forEach(function(o, i) {
     var card = document.getElementById('card-' + i);
     if (!card) return;
-    var isDone = !!doneOrders[o.id];
+    var st = orderStatus[o.id] || '';
+    var isDone  = st === 'done';
+    var isProof = st === 'proof';
     var matchesFilter = activeFilter === 'all' || o.design === activeFilter;
-    var show = matchesFilter && (!isDone || showDone);
+    var show = matchesFilter && (
+      (!isDone  || showDone) &&
+      (!isProof || showProof)
+    );
     card.classList.toggle('hidden', !show);
-    if (matchesFilter) { isDone ? doneCount++ : pending++; }
+    if (matchesFilter) {
+      if (isDone) doneCount++;
+      else if (isProof) proofCount++;
+      else pending++;
+    }
   });
   document.getElementById('order-count').textContent =
-    pending + ' pending · ' + doneCount + ' completed';
+    pending + ' pending · ' + proofCount + ' proof · ' + doneCount + ' completed';
 }
 
 function esc(str) {
@@ -315,17 +373,30 @@ function renderOrders() {
   var app = document.getElementById('app');
   var html = '';
   ordersData.forEach(function(o, i) {
-    var isDone = !!doneOrders[o.id];
-    html += '<div class="order-card' + (isDone ? ' done' : '') + '" id="card-' + i + '">';
-    html += '<div class="card-header" onclick="toggleCard(' + i + ')">';
-    html += '<span class="row-num">' + o.rowIndex + '</span>';
-    html += '<span class="order-name">' + esc(o.name) + '</span>';
-    html += '<div class="order-meta">';
+    var st = orderStatus[o.id] || '';
+    var isDone  = st === 'done';
+    var isProof = st === 'proof';
+    var isSelected = !!selectedIds[o.id];
+    var cardClass = 'order-card'
+      + (isDone  ? ' done'  : '')
+      + (isProof ? ' proof' : '')
+      + (isSelected ? ' selected' : '');
+
+    html += '<div class="' + cardClass + '" id="card-' + i + '">';
+    html += '<div class="card-header">';
+    html += '<input type="checkbox" class="card-checkbox" id="cb-' + i + '" ' + (isSelected ? 'checked' : '') + ' onclick="toggleSelect(event,' + i + ')">';
+    html += '<span class="row-num" onclick="toggleCard(' + i + ')">' + o.rowIndex + '</span>';
+    html += '<span class="order-name" onclick="toggleCard(' + i + ')">' + esc(o.name) + '</span>';
+    html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
     if (o.type)      html += '<span><span class="badge badge-type">'   + esc(o.type)   + '</span></span>';
     if (o.design)    html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
+    if (isProof)     html += '<span><span class="badge badge-proof">Proof Done</span></span>';
     if (o.orderNum)  html += '<span>#' + esc(o.orderNum) + '</span>';
     if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
-    html += '</div><span class="chevron">▼</span></div>';
+    html += '</div>';
+    html += '<span class="chevron" onclick="toggleCard(' + i + ')">▼</span>';
+    html += '</div>';
+
     html += '<div class="card-body">';
     html += '<div class="section-label">Custom Info</div>';
     html += '<div class="custom-info-box">' + esc(o.customInfo) + '</div>';
@@ -335,11 +406,21 @@ function renderOrders() {
     html += '<button class="btn btn-primary" id="cf-' + i + '" onclick="copyField(' + i + ',\'folder\')">Copy Folder Path</button>';
     html += '<button class="btn btn-accent"  id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
     if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order</a>';
+
+    // Proof button
+    if (!isProof && !isDone) {
+      html += '<button class="btn btn-proof" id="cp-' + i + '" onclick="markProof(' + i + ')">Proof Completed</button>';
+    } else if (isProof) {
+      html += '<button class="btn btn-unproof" id="cp-' + i + '" onclick="unmarkProof(' + i + ')">Undo Proof</button>';
+    }
+
+    // Complete button
     if (!isDone) {
-      html += '<button class="btn btn-done"  id="cd-' + i + '" onclick="markDone('   + i + ')">Mark Complete</button>';
+      html += '<button class="btn btn-done"   id="cd-' + i + '" onclick="markDone('   + i + ')">Mark Complete</button>';
     } else {
       html += '<button class="btn btn-undone" id="cd-' + i + '" onclick="markUndone(' + i + ')">Undo Complete</button>';
     }
+
     html += '</div></div></div>';
   });
   app.innerHTML = html || '<div class="empty">No orders found.</div>';
@@ -348,29 +429,98 @@ function renderOrders() {
 
 function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
 
-function markDone(i) {
+// ── Selection ─────────────────────────────────────────────────────────────────
+function toggleSelect(e, i) {
+  e.stopPropagation();
   var o = ordersData[i];
-  doneOrders[o.id] = true;
-  saveDoneOrders();
-  var card = document.getElementById('card-' + i);
-  card.classList.add('done');
-  card.classList.remove('open');
-  var btn = document.getElementById('cd-' + i);
-  if (btn) { btn.className = 'btn btn-undone'; btn.textContent = 'Undo Complete'; btn.onclick = function(){ markUndone(i); }; }
-  applyVisibility();
+  if (selectedIds[o.id]) {
+    delete selectedIds[o.id];
+    document.getElementById('card-' + i).classList.remove('selected');
+  } else {
+    selectedIds[o.id] = true;
+    document.getElementById('card-' + i).classList.add('selected');
+  }
+  updateSelectionUI();
+}
+
+function toggleSelectAll(checked) {
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card || card.classList.contains('hidden')) return;
+    var cb = document.getElementById('cb-' + i);
+    if (checked) { selectedIds[o.id] = true; card.classList.add('selected'); if (cb) cb.checked = true; }
+    else { delete selectedIds[o.id]; card.classList.remove('selected'); if (cb) cb.checked = false; }
+  });
+  updateSelectionUI();
+}
+
+function clearSelection() {
+  selectedIds = {};
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (card) card.classList.remove('selected');
+    var cb = document.getElementById('cb-' + i);
+    if (cb) cb.checked = false;
+  });
+  var saCb = document.getElementById('select-all-cb');
+  if (saCb) saCb.checked = false;
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  var count = Object.keys(selectedIds).length;
+  var banner = document.getElementById('selection-banner');
+  var bannerCount = document.getElementById('selection-banner-count');
+  if (count > 0) {
+    banner.classList.add('visible');
+    bannerCount.textContent = count + ' order' + (count !== 1 ? 's' : '') + ' selected';
+  } else {
+    banner.classList.remove('visible');
+  }
+}
+
+function bulkMarkProof() {
+  Object.keys(selectedIds).forEach(function(id) { orderStatus[id] = 'proof'; });
+  saveStatusData();
+  clearSelection();
+  renderOrders();
+}
+
+function bulkMarkDone() {
+  Object.keys(selectedIds).forEach(function(id) { orderStatus[id] = 'done'; });
+  saveStatusData();
+  clearSelection();
+  renderOrders();
+}
+
+// ── Individual status ─────────────────────────────────────────────────────────
+function markProof(i) {
+  orderStatus[ordersData[i].id] = 'proof';
+  saveStatusData();
+  if (selectedIds[ordersData[i].id]) { delete selectedIds[ordersData[i].id]; updateSelectionUI(); }
+  renderOrders();
+}
+
+function unmarkProof(i) {
+  delete orderStatus[ordersData[i].id];
+  saveStatusData();
+  renderOrders();
+}
+
+function markDone(i) {
+  orderStatus[ordersData[i].id] = 'done';
+  saveStatusData();
+  if (selectedIds[ordersData[i].id]) { delete selectedIds[ordersData[i].id]; updateSelectionUI(); }
+  renderOrders();
 }
 
 function markUndone(i) {
-  var o = ordersData[i];
-  delete doneOrders[o.id];
-  saveDoneOrders();
-  var card = document.getElementById('card-' + i);
-  card.classList.remove('done');
-  var btn = document.getElementById('cd-' + i);
-  if (btn) { btn.className = 'btn btn-done'; btn.textContent = 'Mark Complete'; btn.onclick = function(){ markDone(i); }; }
-  applyVisibility();
+  delete orderStatus[ordersData[i].id];
+  saveStatusData();
+  renderOrders();
 }
 
+// ── Copy ──────────────────────────────────────────────────────────────────────
 function copyField(i, field) {
   var o = ordersData[i];
   var text = field === 'custom' ? o.customInfo : o.folderLink;
