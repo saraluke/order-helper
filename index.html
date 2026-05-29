@@ -129,14 +129,18 @@
 <div class="main">
   <div id="toolbar" style="display:none">
 
-    <!-- Row 1: count + dropdown + filter toggles -->
+    <!-- Row 1: count + dropdown -->
     <div class="toolbar">
       <span class="order-count" id="order-count"></span>
       <select class="filter-select" id="design-filter" onchange="setFilter(this.value)">
         <option value="all">All Designs</option>
       </select>
+    </div>
+
+    <!-- Row 2: visibility toggles -->
+    <div class="toolbar" style="margin-bottom:12px;">
       <button class="filter-btn proof-toggle" id="proof-toggle" onclick="toggleShowProof()">Show Proof Completed</button>
-      <button class="filter-btn" id="done-toggle" onclick="toggleShowDone()">Show Completed</button>
+      <button class="filter-btn" id="done-toggle" onclick="toggleShowDone()">Show Completed Orders</button>
     </div>
 
     <!-- Selection banner -->
@@ -337,7 +341,7 @@ function toggleShowDone() {
   showDone = !showDone;
   var btn = document.getElementById('done-toggle');
   btn.classList.toggle('active', showDone);
-  btn.textContent = showDone ? 'Hide Completed' : 'Show Completed';
+  btn.textContent = showDone ? 'Hide Completed Orders' : 'Show Completed Orders';
   applyVisibility();
 }
 
