@@ -259,8 +259,9 @@ function renderOrders() {
     html += '<div class="section-label">Folder Path</div>';
     html += '<div class="folder-path">' + esc(o.folderLink || '—') + '</div>';
     html += '<div class="actions">';
-    html += '<button class="btn btn-accent" id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
+    // Copy Folder Path first, Copy Custom Info second
     html += '<button class="btn btn-primary" id="cf-' + i + '" onclick="copyField(' + i + ',\'folder\')">Copy Folder Path</button>';
+    html += '<button class="btn btn-accent" id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
     if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order</a>';
     if (!isDone) {
       html += '<button class="btn btn-done" id="cd-' + i + '" onclick="markDone(' + i + ')">Mark Complete</button>';
