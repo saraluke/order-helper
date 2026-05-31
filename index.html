@@ -279,7 +279,7 @@ function loadOrders() {
         var name = (row[0] || '').trim();
         if (name && name !== 'Name') {
           ordersData.push({
-            id: (row[4] || '').trim() || ('row-' + i),
+            id: 'row-' + i,
             name: name,
             folderLink: (row[1] || '').trim(),
             customInfo: (row[2] || '').trim(),
