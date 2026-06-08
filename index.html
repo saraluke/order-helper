@@ -223,7 +223,12 @@ function saveStatusData() {
   var val = JSON.stringify(orderStatus);
   try { localStorage.setItem(STORAGE_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
-  fetch(scriptURL({ action: 'set', key: STORAGE_KEY, value: val }))
+  var body = 'action=set&key=' + encodeURIComponent(STORAGE_KEY) + '&value=' + encodeURIComponent(val);
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  })
     .then(function(r) { return r.json(); })
     .then(function() { setSyncLabel('Saved'); })
     .catch(function() { setSyncLabel('Saved locally'); });
