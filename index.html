@@ -223,15 +223,31 @@ function saveStatusData() {
   var val = JSON.stringify(orderStatus);
   try { localStorage.setItem(STORAGE_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
-  var body = 'action=set&key=' + encodeURIComponent(STORAGE_KEY) + '&value=' + encodeURIComponent(val);
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body
-  })
-    .then(function(r) { return r.json(); })
-    .then(function() { setSyncLabel('Saved'); })
-    .catch(function() { setSyncLabel('Saved locally'); });
+  // Use a form POST via a hidden form — avoids CORS preflight entirely
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = SCRIPT_URL;
+  form.target = 'save-iframe';
+  var fields = { action: 'set', key: STORAGE_KEY, value: val };
+  Object.keys(fields).forEach(function(k) {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = k;
+    input.value = fields[k];
+    form.appendChild(input);
+  });
+  // Create hidden iframe to absorb the response
+  var iframe = document.getElementById('save-iframe');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.name = 'save-iframe';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+  setSyncLabel('Saved');
 }
 
 // ── Sheet loading ─────────────────────────────────────────────────────────────
