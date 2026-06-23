@@ -55,6 +55,8 @@
   .bulk-btn:hover { opacity: 0.85; }
   .bulk-proof-btn { background: var(--proof); color: white; }
   .bulk-complete-btn { background: var(--green); color: white; }
+  .bulk-links-btn { background: var(--tangerine); color: white; }
+  .bulk-links-btn.copied { background: var(--green) !important; color: white !important; }
   .bulk-clear-btn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; border-radius: 4px; }
   .bulk-clear-btn:hover { border-color: var(--navy) !important; color: var(--navy); opacity: 1; }
   .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
@@ -134,6 +136,7 @@
       <span class="selection-banner-count" id="selection-banner-count">0 orders selected</span>
       <button class="bulk-btn bulk-proof-btn" onclick="bulkMarkProof()">Proof Completed</button>
       <button class="bulk-btn bulk-complete-btn" onclick="bulkMarkDone()">Mark Complete</button>
+      <button class="bulk-btn bulk-links-btn" id="bulk-links-btn" onclick="bulkCopyLinks()">Copy Order Links</button>
       <button class="bulk-btn bulk-clear-btn" onclick="clearSelection()">Clear</button>
     </div>
     <div class="select-all-row">
@@ -160,16 +163,12 @@ var showDone     = false;
 var showProof    = false;
 
 // ── ID helpers ────────────────────────────────────────────────────────────────
-// Stable ID: orderNum-rowIndex. Handles multi-item orders (same orderNum, different rows).
-// Falls back to rowIndex alone if orderNum is missing.
 function makeOrderId(orderNum, rowIndex) {
   if (orderNum) return orderNum + '-' + rowIndex;
   return 'row-' + rowIndex;
 }
 
 // ── Migration: old row-N keys → new orderNum-rowIndex keys ───────────────────
-// Called once after both orders and status data are loaded.
-// Matches old 'row-N' keys (where N = rowIndex) to the new ID format.
 function migrateOldKeys() {
   var migrated = false;
   ordersData.forEach(function(o) {
@@ -223,7 +222,6 @@ function saveStatusData() {
   var val = JSON.stringify(orderStatus);
   try { localStorage.setItem(STORAGE_KEY, val); } catch(e) {}
   setSyncLabel('Saving...');
-  // Use a form POST via a hidden form — avoids CORS preflight entirely
   var form = document.createElement('form');
   form.method = 'POST';
   form.action = SCRIPT_URL;
@@ -236,7 +234,6 @@ function saveStatusData() {
     input.value = fields[k];
     form.appendChild(input);
   });
-  // Create hidden iframe to absorb the response
   var iframe = document.getElementById('save-iframe');
   if (!iframe) {
     iframe = document.createElement('iframe');
@@ -330,7 +327,6 @@ function loadOrders() {
         return;
       }
 
-      // Migrate any old row-N keys to new stable IDs, then save if anything changed
       if (migrateOldKeys()) {
         saveStatusData();
       }
@@ -526,6 +522,40 @@ function bulkMarkDone() {
   saveStatusData();
   clearSelection();
   renderOrders();
+}
+
+// ── Bulk copy order links ─────────────────────────────────────────────────────
+function bulkCopyLinks() {
+  var links = [];
+  ordersData.forEach(function(o) {
+    if (selectedIds[o.id] && o.orderLink) {
+      links.push(o.orderLink);
+    }
+  });
+  if (!links.length) return;
+  var text = links.join('\n');
+  var btn = document.getElementById('bulk-links-btn');
+
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+
+  function flashBtn() {
+    if (!btn) return;
+    var orig = btn.textContent;
+    btn.classList.add('copied');
+    btn.textContent = '✓ Copied ' + links.length + ' link' + (links.length !== 1 ? 's' : '') + '!';
+    setTimeout(function() { btn.classList.remove('copied'); btn.textContent = 'Copy Order Links'; }, 2000);
+  }
+
+  if (ok) {
+    flashBtn();
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(flashBtn);
+  }
 }
 
 function markProof(i) {
