@@ -45,7 +45,6 @@
   .filter-btn { background: white; border: 1.5px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-family: 'Montserrat', sans-serif; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .filter-btn:hover { border-color: var(--navy); color: var(--navy); }
   .filter-btn.active { background: var(--muted); border-color: var(--muted); color: white; }
-  .filter-btn.proof-toggle.active { background: var(--proof); border-color: var(--proof); color: white; }
   .select-all-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.7rem; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
   .select-all-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
   .selection-banner { background: #eef1f5; border: 1px solid #c8d0db; border-radius: 6px; padding: 9px 16px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -53,7 +52,6 @@
   .selection-banner-count { font-size: 0.78rem; font-weight: 600; color: var(--navy); margin-right: auto; }
   .bulk-btn { border: none; border-radius: 4px; padding: 7px 14px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
   .bulk-btn:hover { opacity: 0.85; }
-  .bulk-proof-btn { background: var(--proof); color: white; }
   .bulk-complete-btn { background: var(--green); color: white; }
   .bulk-links-btn { background: var(--tangerine); color: white; }
   .bulk-links-btn.copied { background: var(--green) !important; color: white !important; }
@@ -61,8 +59,6 @@
   .bulk-clear-btn:hover { border-color: var(--navy) !important; color: var(--navy); opacity: 1; }
   .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s; }
   .order-card:hover { box-shadow: 0 4px 16px rgba(57,67,80,0.08); border-color: var(--pink-light); }
-  .order-card.proof { border-left: 4px solid var(--proof); }
-  .order-card.proof .order-name { color: var(--proof); }
   .order-card.done { opacity: 0.45; }
   .order-card.done .order-name { text-decoration: line-through; color: var(--muted); }
   .order-card.hidden { display: none; }
@@ -76,7 +72,6 @@
   .badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-type { background: #eef0eb; color: var(--green); }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
-  .badge-proof { background: #e8f0f8; color: var(--proof); }
   .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
   .order-card.open .chevron { transform: rotate(180deg); }
   .card-body { display: none; padding: 0 20px 18px; border-top: 1px solid var(--border); }
@@ -92,10 +87,6 @@
   .btn-secondary:hover { background: var(--navy); color: white; }
   .btn-accent { background: var(--pink-dark); color: white; }
   .btn-accent:hover { background: #c45e76; }
-  .btn-proof { background: var(--proof); color: white; }
-  .btn-proof:hover { background: #6589b0; }
-  .btn-unproof { background: white; color: var(--proof); border: 1.5px solid var(--proof); }
-  .btn-unproof:hover { background: var(--proof); color: white; }
   .btn-done { background: white; color: var(--muted); border: 1.5px solid var(--border); }
   .btn-done:hover { background: #f0f0ee; }
   .btn-undone { background: var(--green); color: white; border: 1.5px solid var(--green); }
@@ -129,12 +120,10 @@
       </select>
     </div>
     <div class="toolbar" style="margin-bottom:12px;">
-      <button class="filter-btn proof-toggle" id="proof-toggle" onclick="toggleShowProof()">Show Proof Completed</button>
       <button class="filter-btn" id="done-toggle" onclick="toggleShowDone()">Show Completed Orders</button>
     </div>
     <div class="selection-banner" id="selection-banner">
       <span class="selection-banner-count" id="selection-banner-count">0 orders selected</span>
-      <button class="bulk-btn bulk-proof-btn" onclick="bulkMarkProof()">Proof Completed</button>
       <button class="bulk-btn bulk-complete-btn" onclick="bulkMarkDone()">Mark Complete</button>
       <button class="bulk-btn bulk-links-btn" id="bulk-links-btn" onclick="bulkCopyLinks()">Copy Order Links</button>
       <button class="bulk-btn bulk-clear-btn" onclick="clearSelection()">Clear</button>
@@ -160,7 +149,6 @@ var orderStatus  = {};
 var selectedIds  = {};
 var activeFilter = 'all';
 var showDone     = false;
-var showProof    = false;
 
 // ── ID helpers ────────────────────────────────────────────────────────────────
 function makeOrderId(orderNum, rowIndex) {
@@ -362,14 +350,6 @@ function setFilter(design) {
   applyVisibility();
 }
 
-function toggleShowProof() {
-  showProof = !showProof;
-  var btn = document.getElementById('proof-toggle');
-  btn.classList.toggle('active', showProof);
-  btn.textContent = showProof ? 'Hide Proof Completed' : 'Show Proof Completed';
-  applyVisibility();
-}
-
 function toggleShowDone() {
   showDone = !showDone;
   var btn = document.getElementById('done-toggle');
@@ -379,24 +359,22 @@ function toggleShowDone() {
 }
 
 function applyVisibility() {
-  var pending = 0, proofCount = 0, doneCount = 0;
+  var pending = 0, doneCount = 0;
   ordersData.forEach(function(o, i) {
     var card = document.getElementById('card-' + i);
     if (!card) return;
     var st = orderStatus[o.id] || '';
     var isDone  = st === 'done';
-    var isProof = st === 'proof';
     var matchesFilter = activeFilter === 'all' || o.design === activeFilter;
-    var show = matchesFilter && ((!isDone || showDone) && (!isProof || showProof));
+    var show = matchesFilter && (!isDone || showDone);
     card.classList.toggle('hidden', !show);
     if (matchesFilter) {
       if (isDone) doneCount++;
-      else if (isProof) proofCount++;
       else pending++;
     }
   });
   document.getElementById('order-count').textContent =
-    pending + ' pending · ' + proofCount + ' proof · ' + doneCount + ' completed';
+    pending + ' pending · ' + doneCount + ' completed';
 }
 
 function esc(str) {
@@ -409,11 +387,9 @@ function renderOrders() {
   ordersData.forEach(function(o, i) {
     var st = orderStatus[o.id] || '';
     var isDone  = st === 'done';
-    var isProof = st === 'proof';
     var isSelected = !!selectedIds[o.id];
     var cardClass = 'order-card'
       + (isDone  ? ' done'  : '')
-      + (isProof ? ' proof' : '')
       + (isSelected ? ' selected' : '');
 
     html += '<div class="' + cardClass + '" id="card-' + i + '">';
@@ -424,7 +400,6 @@ function renderOrders() {
     html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
     if (o.type)      html += '<span><span class="badge badge-type">'   + esc(o.type)   + '</span></span>';
     if (o.design)    html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
-    if (isProof)     html += '<span><span class="badge badge-proof">Proof Done</span></span>';
     if (o.orderNum)  html += '<span>#' + esc(o.orderNum) + '</span>';
     if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
     html += '</div>';
@@ -438,14 +413,8 @@ function renderOrders() {
     html += '<div class="folder-path">' + esc(o.folderLink || '—') + '</div>';
     html += '<div class="actions">';
     html += '<button class="btn btn-primary" id="cf-' + i + '" onclick="copyField(' + i + ',\'folder\')">Copy Folder Path</button>';
-    html += '<button class="btn btn-accent"  id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Custom Info</button>';
-    if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" target="_blank">View Etsy Order</a>';
-
-    if (!isProof && !isDone) {
-      html += '<button class="btn btn-proof" id="cp-' + i + '" onclick="markProof(' + i + ')">Proof Completed</button>';
-    } else if (isProof) {
-      html += '<button class="btn btn-unproof" id="cp-' + i + '" onclick="unmarkProof(' + i + ')">Undo Proof</button>';
-    }
+    html += '<button class="btn btn-accent"  id="cc-' + i + '" onclick="copyField(' + i + ',\'custom\')">Copy Personalization</button>';
+    if (o.orderLink) html += '<a class="btn btn-secondary" href="' + esc(o.orderLink) + '" onclick="window.open(this.href, \'_blank\', \'noopener\'); return false;">View Etsy Order</a>';
 
     if (!isDone) {
       html += '<button class="btn btn-done"   id="cd-' + i + '" onclick="markDone('   + i + ')">Mark Complete</button>';
@@ -510,13 +479,6 @@ function updateSelectionUI() {
   }
 }
 
-function bulkMarkProof() {
-  Object.keys(selectedIds).forEach(function(id) { orderStatus[id] = 'proof'; });
-  saveStatusData();
-  clearSelection();
-  renderOrders();
-}
-
 function bulkMarkDone() {
   Object.keys(selectedIds).forEach(function(id) { orderStatus[id] = 'done'; });
   saveStatusData();
@@ -556,19 +518,6 @@ function bulkCopyLinks() {
   } else if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(flashBtn);
   }
-}
-
-function markProof(i) {
-  orderStatus[ordersData[i].id] = 'proof';
-  saveStatusData();
-  if (selectedIds[ordersData[i].id]) { delete selectedIds[ordersData[i].id]; updateSelectionUI(); }
-  renderOrders();
-}
-
-function unmarkProof(i) {
-  delete orderStatus[ordersData[i].id];
-  saveStatusData();
-  renderOrders();
 }
 
 function markDone(i) {
