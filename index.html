@@ -67,17 +67,39 @@
   .card-header:hover { background: #fdf9fb; }
   .card-checkbox { flex-shrink: 0; width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); }
   .order-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; color: var(--navy); min-width: 160px; transition: all 0.2s; }
-  .order-meta { font-size: 0.72rem; color: var(--muted); font-weight: 400; display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
+  .order-meta { font-size: 0.72rem; color: var(--muted); font-weight: 400; display: flex; gap: 16px; flex: 1; flex-wrap: wrap; min-width: 0; }
   .order-meta span { display: flex; align-items: center; gap: 4px; }
   .badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-type { background: #eef0eb; color: var(--green); }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .header-vars { display: block !important; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--navy); opacity: 0.75; font-size: 0.68rem; }
   .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
   .order-card.open .chevron { transform: rotate(180deg); }
   .card-body { display: none; padding: 0 20px 18px; border-top: 1px solid var(--border); }
   .order-card.open .card-body { display: block; }
   .section-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; margin: 14px 0 6px; }
+  .section-hint { text-transform: none; letter-spacing: 0; font-weight: 400; opacity: 0.8; margin-left: 6px; }
   .custom-info-box { background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-size: 0.82rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; font-family: 'Montserrat', sans-serif; }
+
+  /* Variations: compact chips */
+  .var-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .var-chip { display: inline-flex; align-items: baseline; gap: 6px; background: white; border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 0.76rem; color: var(--text); }
+  .var-chip-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+
+  /* Personalization: label / value grid */
+  .detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; background: #f8f5f2; border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; }
+  .detail-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; padding-top: 4px; max-width: 220px; }
+  .detail-value { font-size: 0.85rem; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-word; cursor: pointer; border-radius: 3px; padding: 1px 4px; margin: -1px -4px; transition: background 0.15s, color 0.15s; }
+  .detail-value:hover { background: #efe8e1; }
+  .detail-value.copied { background: #e4e8df; color: var(--green); }
+  .detail-grid .detail-value.full { grid-column: 1 / -1; }
+  @media (max-width: 560px) {
+    .detail-grid { grid-template-columns: 1fr; gap: 2px; }
+    .detail-label { padding-top: 8px; }
+    .detail-label:first-child { padding-top: 0; }
+    .header-vars { max-width: 100%; }
+  }
+
   .folder-path { font-size: 0.72rem; color: var(--muted); font-family: 'Courier New', monospace; word-break: break-all; background: #f8f5f2; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); }
   .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
   .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
@@ -144,6 +166,10 @@ var SHEET_ID    = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
 var SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbyyAzdGz6vXvV-2g2zwQCrWByhI5dWDGxvuthzwTNXpJYpHlMs7G4fhT5r0aREK7Bct/exec';
 var STORAGE_KEY = 'slc_etsy_done';
 
+// Sheet column positions (0-based): L-P = personalization 1-5, Q-S = variations 1-3
+var PERSONALIZATION_COLS = [11, 12, 13, 14, 15];
+var VARIATION_COLS       = [16, 17, 18];
+
 var ordersData   = [];
 var orderStatus  = {};
 var selectedIds  = {};
@@ -168,6 +194,41 @@ function migrateOldKeys() {
     }
   });
   return migrated;
+}
+
+// ── Personalization / variation parsing ───────────────────────────────────────
+// Splits "Label: value" on the first colon-space. Values without a label are kept as-is.
+function parseLabeled(raw) {
+  var text = (raw || '').trim();
+  if (!text) return null;
+  var idx = text.indexOf(': ');
+  var label = '', value = text;
+  if (idx > 0 && idx < 80) {
+    label = text.slice(0, idx).trim();
+    value = text.slice(idx + 2).trim();
+  }
+  if (!value) return null;
+  return { label: label, value: value };
+}
+
+// File or photo uploads are handled elsewhere, so they are skipped here.
+function isFileField(item) {
+  var v = item.value, l = item.label;
+  if (/^https?:\/\//i.test(v)) return true;
+  if (/\.(jpe?g|png|gif|heic|heif|webp|pdf|svg|ai|eps|psd|tiff?|zip)(\?.*)?$/i.test(v)) return true;
+  if (/upload|attach/i.test(l)) return true;
+  return false;
+}
+
+function collectFields(row, cols, skipFiles) {
+  var out = [];
+  cols.forEach(function(c) {
+    var item = parseLabeled(row[c]);
+    if (!item) return;
+    if (skipFiles && isFileField(item)) return;
+    out.push(item);
+  });
+  return out;
 }
 
 // ── Sync helpers ──────────────────────────────────────────────────────────────
@@ -303,6 +364,8 @@ function loadOrders() {
             type: (row[5] || '').trim(),
             design: (row[6] || '').trim(),
             orderDate: (row[9] || '').trim(),
+            personalization: collectFields(row, PERSONALIZATION_COLS, true),
+            variations: collectFields(row, VARIATION_COLS, false),
             rowIndex: rowIndex
           });
         }
@@ -381,6 +444,33 @@ function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function renderVariations(o) {
+  if (!o.variations.length) return '';
+  var h = '<div class="section-label">Variations</div><div class="var-chips">';
+  o.variations.forEach(function(v) {
+    h += '<span class="var-chip">';
+    if (v.label) h += '<span class="var-chip-label">' + esc(v.label) + '</span>';
+    h += '<span>' + esc(v.value) + '</span></span>';
+  });
+  return h + '</div>';
+}
+
+function renderPersonalization(o, i) {
+  if (!o.personalization.length) return '';
+  var h = '<div class="section-label">Personalization<span class="section-hint">click a value to copy</span></div>';
+  h += '<div class="detail-grid">';
+  o.personalization.forEach(function(p, j) {
+    var id = 'pv-' + i + '-' + j;
+    if (p.label) {
+      h += '<div class="detail-label">' + esc(p.label) + '</div>';
+      h += '<div class="detail-value" id="' + id + '" title="Click to copy" onclick="copyDetail(' + i + ',' + j + ')">' + esc(p.value) + '</div>';
+    } else {
+      h += '<div class="detail-value full" id="' + id + '" title="Click to copy" onclick="copyDetail(' + i + ',' + j + ')">' + esc(p.value) + '</div>';
+    }
+  });
+  return h + '</div>';
+}
+
 function renderOrders() {
   var app = document.getElementById('app');
   var html = '';
@@ -392,6 +482,8 @@ function renderOrders() {
       + (isDone  ? ' done'  : '')
       + (isSelected ? ' selected' : '');
 
+    var varSummary = o.variations.map(function(v) { return v.value; }).join(' · ');
+
     html += '<div class="' + cardClass + '" id="card-' + i + '">';
     html += '<div class="card-header">';
     html += '<input type="checkbox" class="card-checkbox" id="cb-' + i + '" ' + (isSelected ? 'checked' : '') + ' onclick="toggleSelect(event,' + i + ')">';
@@ -402,13 +494,18 @@ function renderOrders() {
     if (o.design)    html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
     if (o.orderNum)  html += '<span>#' + esc(o.orderNum) + '</span>';
     if (o.orderDate) html += '<span class="date-label">' + formatDate(o.orderDate) + '</span>';
+    if (varSummary)  html += '<span class="header-vars" title="' + esc(varSummary) + '">' + esc(varSummary) + '</span>';
     html += '</div>';
     html += '<span class="chevron" onclick="toggleCard(' + i + ')">▼</span>';
     html += '</div>';
 
     html += '<div class="card-body">';
-    html += '<div class="section-label">Custom Info</div>';
-    html += '<div class="custom-info-box">' + esc(o.customInfo) + '</div>';
+    html += renderVariations(o);
+    html += renderPersonalization(o, i);
+    if (o.customInfo || !o.personalization.length) {
+      html += '<div class="section-label">Custom Info</div>';
+      html += '<div class="custom-info-box">' + esc(o.customInfo || '—') + '</div>';
+    }
     html += '<div class="section-label">Folder Path</div>';
     html += '<div class="folder-path">' + esc(o.folderLink || '—') + '</div>';
     html += '<div class="actions">';
@@ -486,6 +583,19 @@ function bulkMarkDone() {
   renderOrders();
 }
 
+// ── Clipboard helper ──────────────────────────────────────────────────────────
+function copyText(text, onSuccess) {
+  if (!text) return;
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (ok) { onSuccess(); }
+  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(onSuccess); }
+}
+
 // ── Bulk copy order links ─────────────────────────────────────────────────────
 function bulkCopyLinks() {
   var links = [];
@@ -495,29 +605,13 @@ function bulkCopyLinks() {
     }
   });
   if (!links.length) return;
-  var text = links.join('\n');
   var btn = document.getElementById('bulk-links-btn');
-
-  var ta = document.createElement('textarea');
-  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
-  document.body.appendChild(ta); ta.focus(); ta.select();
-  var ok = false;
-  try { ok = document.execCommand('copy'); } catch(e) {}
-  document.body.removeChild(ta);
-
-  function flashBtn() {
+  copyText(links.join('\n'), function() {
     if (!btn) return;
-    var orig = btn.textContent;
     btn.classList.add('copied');
     btn.textContent = '✓ Copied ' + links.length + ' link' + (links.length !== 1 ? 's' : '') + '!';
     setTimeout(function() { btn.classList.remove('copied'); btn.textContent = 'Copy Order Links'; }, 2000);
-  }
-
-  if (ok) {
-    flashBtn();
-  } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(flashBtn);
-  }
+  });
 }
 
 function markDone(i) {
@@ -533,19 +627,29 @@ function markUndone(i) {
   renderOrders();
 }
 
+// Personalization button: uses Custom Info when present, otherwise the structured fields.
+function personalizationText(o) {
+  if (o.customInfo) return o.customInfo;
+  return o.personalization.map(function(p) {
+    return p.label ? p.label + ': ' + p.value : p.value;
+  }).join('\n');
+}
+
 function copyField(i, field) {
   var o = ordersData[i];
-  var text = field === 'custom' ? o.customInfo : o.folderLink;
+  var text = field === 'custom' ? personalizationText(o) : o.folderLink;
   var btnId = field === 'custom' ? 'cc-' + i : 'cf-' + i;
-  if (!text) return;
-  var ta = document.createElement('textarea');
-  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
-  document.body.appendChild(ta); ta.focus(); ta.select();
-  var ok = false;
-  try { ok = document.execCommand('copy'); } catch(e) {}
-  document.body.removeChild(ta);
-  if (ok) { flashCopied(btnId); }
-  else if (navigator.clipboard) { navigator.clipboard.writeText(text).then(function() { flashCopied(btnId); }); }
+  copyText(text, function() { flashCopied(btnId); });
+}
+
+function copyDetail(i, j) {
+  var p = ordersData[i].personalization[j];
+  var el = document.getElementById('pv-' + i + '-' + j);
+  copyText(p.value, function() {
+    if (!el) return;
+    el.classList.add('copied');
+    setTimeout(function() { el.classList.remove('copied'); }, 1200);
+  });
 }
 
 function flashCopied(btnId) {
