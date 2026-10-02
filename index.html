@@ -389,7 +389,6 @@ function loadOrders() {
       }
 
       setDot('loaded');
-      buildFilterDropdown();
       renderOrders();
       document.getElementById('toolbar').style.display = 'block';
       updateSelectionUI();
@@ -400,15 +399,22 @@ function loadOrders() {
   });
 }
 
+// Only designs with at least one pending (not completed) order appear in the dropdown.
+// Rebuilt on every render, so a design drops off as soon as its last order is marked complete.
 function buildFilterDropdown() {
   var designs = {};
-  ordersData.forEach(function(o) { if (o.design) designs[o.design] = true; });
+  ordersData.forEach(function(o) {
+    if (!o.design) return;
+    if (orderStatus[o.id] === 'done') return;
+    designs[o.design] = (designs[o.design] || 0) + 1;
+  });
   var keys = Object.keys(designs).sort();
+  if (activeFilter !== 'all' && !designs[activeFilter]) activeFilter = 'all';
   var select = document.getElementById('design-filter');
   select.innerHTML = '<option value="all">All Designs</option>';
   keys.forEach(function(d) {
     var opt = document.createElement('option');
-    opt.value = d; opt.textContent = d;
+    opt.value = d; opt.textContent = d + ' (' + designs[d] + ')';
     select.appendChild(opt);
   });
   select.value = activeFilter;
@@ -478,6 +484,7 @@ function renderPersonalization(o, i) {
 }
 
 function renderOrders() {
+  buildFilterDropdown();
   var app = document.getElementById('app');
   var html = '';
   ordersData.forEach(function(o, i) {
