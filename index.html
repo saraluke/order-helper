@@ -72,6 +72,8 @@
   .badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 20px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
   .badge-type { background: #eef0eb; color: var(--green); }
   .badge-design { background: #faeef2; color: var(--pink-dark); }
+  .gift-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: #fbeee2; color: var(--tangerine); }
+  .gift-icon svg { width: 15px; height: 15px; display: block; }
   .header-vars { display: block !important; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--navy); opacity: 0.75; font-size: 0.68rem; }
   .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
   .order-card.open .chevron { transform: rotate(180deg); }
@@ -169,6 +171,9 @@ var STORAGE_KEY = 'slc_etsy_done';
 // Sheet column positions (0-based): L-P = personalization 1-5, Q-S = variations 1-3
 var PERSONALIZATION_COLS = [11, 12, 13, 14, 15];
 var VARIATION_COLS       = [16, 17, 18];
+// Column T: "Yes" means gift wrap was purchased; blank or "No" means it was not
+var GIFT_WRAP_COL        = 19;
+var GIFT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>';
 
 var ordersData   = [];
 var orderStatus  = {};
@@ -366,6 +371,7 @@ function loadOrders() {
             orderDate: (row[9] || '').trim(),
             personalization: collectFields(row, PERSONALIZATION_COLS, true),
             variations: collectFields(row, VARIATION_COLS, false),
+            giftWrap: (row[GIFT_WRAP_COL] || '').trim().toLowerCase() === 'yes',
             rowIndex: rowIndex
           });
         }
@@ -489,6 +495,7 @@ function renderOrders() {
     html += '<input type="checkbox" class="card-checkbox" id="cb-' + i + '" ' + (isSelected ? 'checked' : '') + ' onclick="toggleSelect(event,' + i + ')">';
     html += '<span class="row-num" onclick="toggleCard(' + i + ')">' + o.rowIndex + '</span>';
     html += '<span class="order-name" onclick="toggleCard(' + i + ')">' + esc(o.name) + '</span>';
+    if (o.giftWrap) html += '<span class="gift-icon" title="Gift wrap purchased" aria-label="Gift wrap purchased" onclick="toggleCard(' + i + ')">' + GIFT_SVG + '</span>';
     html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
     if (o.type)      html += '<span><span class="badge badge-type">'   + esc(o.type)   + '</span></span>';
     if (o.design)    html += '<span><span class="badge badge-design">' + esc(o.design) + '</span></span>';
