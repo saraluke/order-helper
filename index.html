@@ -26,6 +26,10 @@
   .status-dot.loading { background: var(--tangerine); animation: pulse 1s infinite; }
   .status-dot.error { background: #c97070; }
   .sync-label { font-size: 0.65rem; color: var(--pink-dark); letter-spacing: 0.06em; opacity: 0.8; }
+  .sync-label.sync-error { color: #ffb4b4; opacity: 1; font-weight: 600; }
+  .save-warning { display: none; background: #fbeaea; border-bottom: 1px solid #e5b9b9; color: #8a2f2f; font-size: 0.78rem; font-weight: 500; line-height: 1.5; padding: 10px 32px; text-align: center; }
+  .save-warning.visible { display: block; }
+  .save-warning button { margin-left: 10px; background: #8a2f2f; color: white; border: none; border-radius: 3px; padding: 4px 12px; font-family: 'Montserrat', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
   .loading-state, .error-state { text-align: center; padding: 80px 24px; color: var(--muted); }
@@ -131,9 +135,11 @@
   <div class="header-right">
     <span class="sync-label" id="sync-label"></span>
     <span class="status-dot" id="status-dot"></span>
-    <button id="refresh-btn" onclick="loadOrders()">↺ Refresh</button>
+    <button id="refresh-btn" onclick="loadOrders(0)">↺ Refresh</button>
   </div>
 </header>
+
+<div class="save-warning" id="save-warning"><span id="save-warning-text"></span><button id="save-warning-retry" onclick="saveStatusData()">Try again</button></div>
 
 <div class="main">
   <div id="toolbar" style="display:none">
@@ -169,6 +175,9 @@
 var SHEET_ID    = '1lPp2QcCsJwxn22X8gMlzjKsrNen2BFkb1kN8jVUxXOQ';
 var SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbyyAzdGz6vXvV-2g2zwQCrWByhI5dWDGxvuthzwTNXpJYpHlMs7G4fhT5r0aREK7Bct/exec';
 var STORAGE_KEY = 'slc_etsy_done';
+var UNSYNCED_KEY = 'slc_etsy_done_unsynced';   // '1' while this device has a save the backend has not confirmed
+var BACKUP_KEY   = 'slc_etsy_done_backup_v1';  // copy of the old-format list, kept on this device
+var CELL_LIMIT   = 50000;                      // Google Sheets allows 50,000 characters in one cell
 
 // Sheet column positions (0-based): L-P = personalization 1-5, Q-S = variations 1-3
 var PERSONALIZATION_COLS = [11, 12, 13, 14, 15];
@@ -183,6 +192,11 @@ var selectedIds  = {};
 var activeFilter = 'all';
 var showDone     = false;
 var openIds      = {};   // which order cards are expanded, keyed by stable order ID
+var rawStatus     = null; // completed-order data as last read (parsed)
+var rawStatusText = '';   // the same data exactly as the sync backend returned it
+var statusSource  = '';   // 'server' or 'local' (offline fallback)
+var saveSeq       = 0;    // increments on every save so only the newest one reports its result
+var savePending   = false;
 
 // ── ID helpers ────────────────────────────────────────────────────────────────
 function makeOrderId(orderNum, rowIndex) {
@@ -190,18 +204,82 @@ function makeOrderId(orderNum, rowIndex) {
   return 'row-' + rowIndex;
 }
 
-// ── Migration: old row-N keys → new orderNum-rowIndex keys ───────────────────
-function migrateOldKeys() {
-  var migrated = false;
-  ordersData.forEach(function(o) {
-    var oldKey = 'row-' + o.rowIndex;
-    if (orderStatus[oldKey] !== undefined && orderStatus[o.id] === undefined) {
-      orderStatus[o.id] = orderStatus[oldKey];
-      delete orderStatus[oldKey];
-      migrated = true;
-    }
+// ── Completed-order storage ───────────────────────────────────────────────────
+// The sync backend keeps the completed list in ONE spreadsheet cell (50,000 characters max).
+// The old format stored {"orderNum-row":"done", ...} for every order ever completed, including
+// orders long since archived out of the sheet. It filled the cell at about 2,000 orders, and
+// from then on every save was silently rejected.
+//
+// Format v2: {"v":2,"done":"4147790789,4147864894,4147864894.1,..."}
+//   - lists only completed orders that are still in the sheet (old ones drop off on their own)
+//   - an order is identified by its order number, plus ".1", ".2" for further items in the same
+//     order, so archiving rows off the top of the sheet does not disturb it
+//   - an order is completed only if it is listed; anything unlisted shows as pending
+function rowsInSheetOrder() {
+  return ordersData.slice().sort(function(a, b) { return a.rowIndex - b.rowIndex; });
+}
+
+function encodeStatus() {
+  var keys = [];
+  rowsInSheetOrder().forEach(function(o) { if (orderStatus[o.id] === 'done') keys.push(o.key); });
+  return JSON.stringify({ v: 2, done: keys.join(',') });
+}
+
+// Turns stored data (v2 or the old format) into { orderId: 'done' } for orders in the sheet.
+function decodeStatus(raw) {
+  var status = {};
+  if (!raw || typeof raw !== 'object') return status;
+  var byKey = {}, byId = {};
+  ordersData.forEach(function(o) { byKey[o.key] = o; byId[o.id] = o; });
+
+  if (raw.v === 2 && typeof raw.done === 'string' && raw.done) {
+    raw.done.split(',').forEach(function(k) { if (byKey[k]) status[byKey[k].id] = 'done'; });
+  }
+  // Old-format entries: the previous storage format, or a save made by an old cached copy of this page.
+  Object.keys(raw).forEach(function(k) {
+    if (k === 'v' || k === 'done' || raw[k] !== 'done') return;
+    if (byId[k]) status[k] = 'done';
   });
-  return migrated;
+  ordersData.forEach(function(o) {            // oldest format of all: "row-N"
+    if (raw['row-' + o.rowIndex] === 'done') status[o.id] = 'done';
+  });
+  return status;
+}
+
+function parseStatusString(str) {
+  if (!str) return null;
+  try {
+    var parsed = JSON.parse(str);
+    return (parsed && typeof parsed === 'object') ? parsed : null;
+  } catch(e) { return null; }
+}
+
+function readLocal(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
+function writeLocal(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
+
+// Runs once the sheet has loaded: works out which orders are completed, restores anything this
+// device completed that never reached the backend, and converts old-format data to v2.
+function applyLoadedStatus() {
+  orderStatus = decodeStatus(rawStatus);
+  if (statusSource !== 'server') return;
+
+  var isV2 = !!(rawStatus && rawStatus.v === 2);
+  var backendWasFull = !isV2 && rawStatusText.length >= CELL_LIMIT - 200;
+  var unconfirmed = readLocal(UNSYNCED_KEY) === '1';
+  var needsSave = false;
+
+  if (unconfirmed || backendWasFull) {
+    var local = decodeStatus(parseStatusString(readLocal(STORAGE_KEY)));
+    Object.keys(local).forEach(function(id) {
+      if (orderStatus[id] !== 'done') { orderStatus[id] = 'done'; needsSave = true; }
+    });
+  }
+  if (!isV2 && rawStatusText) {
+    if (!readLocal(BACKUP_KEY)) writeLocal(BACKUP_KEY, rawStatusText);
+    needsSave = true;
+  }
+  if (needsSave) saveStatusData();
+  else if (unconfirmed) writeLocal(UNSYNCED_KEY, '0');
 }
 
 // ── Personalization / variation parsing ───────────────────────────────────────
@@ -260,29 +338,62 @@ function loadStatusData(callback) {
   fetch(scriptURL({ action: 'get', key: STORAGE_KEY }))
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.value) {
-        try { orderStatus = JSON.parse(data.value); } catch(e) { orderStatus = {}; }
-      } else {
-        orderStatus = {};
-      }
+      var text = data.value ? String(data.value) : '';
+      var parsed = parseStatusString(text);
+      if (text && !parsed) throw new Error('Saved data could not be read');
+      return { text: text, parsed: parsed };
+    })
+    .then(function(res) {
+      rawStatus = res.parsed; rawStatusText = res.text; statusSource = 'server';
       setSyncLabel('Synced');
       callback();
-    })
-    .catch(function() {
-      try { var s = localStorage.getItem(STORAGE_KEY); if (s) orderStatus = JSON.parse(s); } catch(e) {}
+    }, function() {
+      rawStatus = parseStatusString(readLocal(STORAGE_KEY)); rawStatusText = ''; statusSource = 'local';
       setSyncLabel('Offline');
       callback();
     });
 }
 
+function setSaveFailed(reason) {
+  var label = document.getElementById('sync-label');
+  var warn  = document.getElementById('save-warning');
+  var text  = document.getElementById('save-warning-text');
+  var retry = document.getElementById('save-warning-retry');
+  if (label) label.classList.toggle('sync-error', !!reason);
+  if (!warn) return;
+  warn.classList.toggle('visible', !!reason);
+  if (reason === 'full') {
+    text.textContent = 'Not saved: the completed list has outgrown its storage cell. Archive older rows out of the order sheet, then refresh.';
+    retry.style.display = 'none';
+  } else if (reason) {
+    text.textContent = 'Your last change has not saved to the sheet yet. It is kept on this device and will be re-sent.';
+    retry.style.display = '';
+  }
+}
+
 function saveStatusData() {
-  var val = JSON.stringify(orderStatus);
-  try { localStorage.setItem(STORAGE_KEY, val); } catch(e) {}
+  if (!ordersData.length) return;
+  var val = encodeStatus();
+  writeLocal(STORAGE_KEY, val);
+  writeLocal(UNSYNCED_KEY, '1');
+  var seq = ++saveSeq;
+  if (val.length > CELL_LIMIT) {
+    savePending = false;
+    setSyncLabel('Not saved');
+    setSaveFailed('full');
+    return;
+  }
+  savePending = true;
   setSyncLabel('Saving...');
+  postStatus(val, seq, false);
+}
+
+function postStatus(val, seq, isRetry) {
   var form = document.createElement('form');
   form.method = 'POST';
   form.action = SCRIPT_URL;
-  form.target = 'save-iframe';
+  var frameName = 'save-iframe-' + seq + (isRetry ? 'r' : '');
+  form.target = frameName;
   var fields = { action: 'set', key: STORAGE_KEY, value: val };
   Object.keys(fields).forEach(function(k) {
     var input = document.createElement('input');
@@ -291,17 +402,59 @@ function saveStatusData() {
     input.value = fields[k];
     form.appendChild(input);
   });
-  var iframe = document.getElementById('save-iframe');
-  if (!iframe) {
-    iframe = document.createElement('iframe');
-    iframe.name = 'save-iframe';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+  // A fresh hidden frame per save, so a new save never cancels one still in flight.
+  var iframe = document.createElement('iframe');
+  iframe.name = frameName;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  setTimeout(function() { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 60000);
+
+  var started = false;
+  function startCheck() {
+    if (started) return;
+    started = true;
+    confirmSaved(val, seq, isRetry, 1);
   }
+  iframe.onload = startCheck;
+  setTimeout(startCheck, 5000);
+
   document.body.appendChild(form);
   form.submit();
   document.body.removeChild(form);
-  setSyncLabel('Saved');
+}
+
+// Reads the value back from the backend. "Saved" only shows once it matches what was sent.
+function confirmSaved(val, seq, isRetry, attempt) {
+  if (seq !== saveSeq) return;                       // a newer save has taken over
+  function tryAgainOrFail() {
+    if (seq !== saveSeq) return;
+    if (attempt < 4) {
+      setTimeout(function() { confirmSaved(val, seq, isRetry, attempt + 1); }, 2500);
+    } else if (!isRetry) {
+      postStatus(val, seq, true);                    // one automatic re-send
+    } else {
+      savePending = false;
+      setSyncLabel('Not saved');
+      setSaveFailed('failed');
+    }
+  }
+  fetch(scriptURL({ action: 'get', key: STORAGE_KEY }))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (seq !== saveSeq) return;
+      var stored = parseStatusString(data.value);
+      if (stored && JSON.stringify(stored) === val) {
+        savePending = false;
+        rawStatus = stored; rawStatusText = val;
+        writeLocal(UNSYNCED_KEY, '0');
+        var pct = Math.round(val.length / CELL_LIMIT * 100);
+        setSyncLabel(pct >= 80 ? 'Saved (storage ' + pct + '% full: archive old rows soon)' : 'Saved');
+        setSaveFailed(false);
+      } else {
+        tryAgainOrFail();
+      }
+    })
+    .catch(tryAgainOrFail);
 }
 
 // ── Sheet loading ─────────────────────────────────────────────────────────────
@@ -342,7 +495,12 @@ function formatDate(str) {
   return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
 
-function loadOrders() {
+function loadOrders(waited) {
+  // If a save is still being confirmed, give it a moment so Refresh does not read stale data.
+  if (savePending && (waited || 0) < 16) {
+    setTimeout(function() { loadOrders((waited || 0) + 1); }, 500);
+    return;
+  }
   setDot('loading');
   selectedIds = {};
   var app = document.getElementById('app');
@@ -357,13 +515,19 @@ function loadOrders() {
     }).then(function(text) {
       var rows = parseCSV(text);
       ordersData = [];
+      var seenOrderNums = {};
       rows.forEach(function(row, i) {
         var name = (row[0] || '').trim();
         if (name && name !== 'Name') {
           var rowIndex = i + 1;
           var orderNum = (row[4] || '').trim();
+          // Storage key: order number, plus .1, .2 for additional items in the same order
+          var keyBase = orderNum ? orderNum.replace(/[,\s]/g, '') : ('row' + rowIndex);
+          var occurrence = seenOrderNums[keyBase] || 0;
+          seenOrderNums[keyBase] = occurrence + 1;
           ordersData.push({
             id: makeOrderId(orderNum, rowIndex),
+            key: occurrence ? keyBase + '.' + occurrence : keyBase,
             name: name,
             folderLink: (row[1] || '').trim(),
             customInfo: (row[2] || '').trim(),
@@ -387,9 +551,7 @@ function loadOrders() {
         return;
       }
 
-      if (migrateOldKeys()) {
-        saveStatusData();
-      }
+      applyLoadedStatus();
 
       setDot('loaded');
       renderOrders();
