@@ -145,6 +145,8 @@
     </div>
     <div class="toolbar" style="margin-bottom:12px;">
       <button class="filter-btn" id="done-toggle" onclick="toggleShowDone()">Show Completed Orders</button>
+      <button class="filter-btn" style="margin-left:auto;" onclick="expandAll()">Expand All</button>
+      <button class="filter-btn" onclick="collapseAll()">Collapse All</button>
     </div>
     <div class="selection-banner" id="selection-banner">
       <span class="selection-banner-count" id="selection-banner-count">0 orders selected</span>
@@ -180,6 +182,7 @@ var orderStatus  = {};
 var selectedIds  = {};
 var activeFilter = 'all';
 var showDone     = false;
+var openIds      = {};   // which order cards are expanded, keyed by stable order ID
 
 // ── ID helpers ────────────────────────────────────────────────────────────────
 function makeOrderId(orderNum, rowIndex) {
@@ -493,7 +496,8 @@ function renderOrders() {
     var isSelected = !!selectedIds[o.id];
     var cardClass = 'order-card'
       + (isDone  ? ' done'  : '')
-      + (isSelected ? ' selected' : '');
+      + (isSelected ? ' selected' : '')
+      + (openIds[o.id] ? ' open' : '');
 
     var varSummary = o.variations.map(function(v) { return v.value; }).join(' · ');
 
@@ -539,7 +543,29 @@ function renderOrders() {
   applyVisibility();
 }
 
-function toggleCard(i) { document.getElementById('card-' + i).classList.toggle('open'); }
+function toggleCard(i) {
+  var id = ordersData[i].id;
+  if (openIds[id]) delete openIds[id]; else openIds[id] = true;
+  document.getElementById('card-' + i).classList.toggle('open', !!openIds[id]);
+}
+
+// Opens every card currently showing (respects the design filter and completed toggle).
+function expandAll() {
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (!card || card.classList.contains('hidden')) return;
+    openIds[o.id] = true;
+    card.classList.add('open');
+  });
+}
+
+function collapseAll() {
+  openIds = {};
+  ordersData.forEach(function(o, i) {
+    var card = document.getElementById('card-' + i);
+    if (card) card.classList.remove('open');
+  });
+}
 
 function toggleSelect(e, i) {
   e.stopPropagation();
@@ -591,7 +617,7 @@ function updateSelectionUI() {
 }
 
 function bulkMarkDone() {
-  Object.keys(selectedIds).forEach(function(id) { orderStatus[id] = 'done'; });
+  Object.keys(selectedIds).forEach(function(id) { orderStatus[id] = 'done'; delete openIds[id]; });
   saveStatusData();
   clearSelection();
   renderOrders();
@@ -630,6 +656,7 @@ function bulkCopyLinks() {
 
 function markDone(i) {
   orderStatus[ordersData[i].id] = 'done';
+  delete openIds[ordersData[i].id];
   saveStatusData();
   if (selectedIds[ordersData[i].id]) { delete selectedIds[ordersData[i].id]; updateSelectionUI(); }
   renderOrders();
