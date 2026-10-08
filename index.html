@@ -78,6 +78,8 @@
   .badge-design { background: #faeef2; color: var(--pink-dark); }
   .gift-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: #fbeee2; color: var(--tangerine); }
   .gift-icon svg { width: 15px; height: 15px; display: block; }
+  .rush-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--pink-dark); color: white; }
+  .rush-icon svg { width: 14px; height: 14px; display: block; }
   .header-vars { display: block !important; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--navy); opacity: 0.75; font-size: 0.68rem; }
   .chevron { color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; flex-shrink: 0; margin-left: auto; }
   .order-card.open .chevron { transform: rotate(180deg); }
@@ -184,6 +186,8 @@ var PERSONALIZATION_COLS = [11, 12, 13, 14, 15];
 var VARIATION_COLS       = [16, 17, 18];
 // Column T: "Yes" means gift wrap was purchased; blank or "No" means it was not
 var GIFT_WRAP_COL        = 19;
+var RUSH_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>';
+var RUSH_WINDOW_DAYS = 14;  // a separate rush purchase flags that customer's orders from up to this many days earlier
 var GIFT_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>';
 
 var ordersData   = [];
@@ -215,6 +219,34 @@ function makeOrderId(orderNum, rowIndex) {
 //   - an order is identified by its order number, plus ".1", ".2" for further items in the same
 //     order, so archiving rows off the top of the sheet does not disturb it
 //   - an order is completed only if it is listed; anything unlisted shows as pending
+// ── Rush orders ───────────────────────────────────────────────────────────────
+// Rush is its own Etsy listing (Design = RUSH). Customers often buy it as a separate order
+// after their stamp order, so a rush purchase flags:
+//   - every row of the order that contains it, and
+//   - the same customer's orders placed up to RUSH_WINDOW_DAYS before it (or within a day after).
+// The customer is matched by email, or by exact name when there is no email.
+function markRushOrders() {
+  var DAY = 86400000;
+  function who(o) { return o.email || ('name:' + o.name.toLowerCase()); }
+  var buys = ordersData.filter(function(o) { return o.design.toUpperCase() === 'RUSH'; });
+  var rushOrderNums = {};
+  buys.forEach(function(b) { if (b.orderNum) rushOrderNums[b.orderNum] = true; });
+  ordersData.forEach(function(o) {
+    o.rush = '';
+    if (o.orderNum && rushOrderNums[o.orderNum]) { o.rush = 'Rush order'; return; }
+    var t = parseDate(o.orderDate);
+    if (!t) return;
+    for (var i = 0; i < buys.length; i++) {
+      var b = buys[i], bt = parseDate(b.orderDate);
+      if (!bt || who(b) !== who(o)) continue;
+      if (t >= bt - RUSH_WINDOW_DAYS * DAY && t <= bt + DAY) {
+        o.rush = 'Rush purchased separately' + (b.orderNum ? ' (order #' + b.orderNum + ')' : '');
+        return;
+      }
+    }
+  });
+}
+
 function rowsInSheetOrder() {
   return ordersData.slice().sort(function(a, b) { return a.rowIndex - b.rowIndex; });
 }
@@ -536,6 +568,7 @@ function loadOrders(waited) {
             type: (row[5] || '').trim(),
             design: (row[6] || '').trim(),
             orderDate: (row[9] || '').trim(),
+            email: (row[8] || '').trim().toLowerCase(),
             personalization: collectFields(row, PERSONALIZATION_COLS, true),
             variations: collectFields(row, VARIATION_COLS, false),
             giftWrap: (row[GIFT_WRAP_COL] || '').trim().toLowerCase() === 'yes',
@@ -551,6 +584,7 @@ function loadOrders(waited) {
         return;
       }
 
+      markRushOrders();
       applyLoadedStatus();
 
       setDot('loaded');
@@ -668,6 +702,7 @@ function renderOrders() {
     html += '<input type="checkbox" class="card-checkbox" id="cb-' + i + '" ' + (isSelected ? 'checked' : '') + ' onclick="toggleSelect(event,' + i + ')">';
     html += '<span class="row-num" onclick="toggleCard(' + i + ')">' + o.rowIndex + '</span>';
     html += '<span class="order-name" onclick="toggleCard(' + i + ')">' + esc(o.name) + '</span>';
+    if (o.rush) html += '<span class="rush-icon" title="' + esc(o.rush) + '" aria-label="' + esc(o.rush) + '" onclick="toggleCard(' + i + ')">' + RUSH_SVG + '</span>';
     if (o.giftWrap) html += '<span class="gift-icon" title="Gift wrap purchased" aria-label="Gift wrap purchased" onclick="toggleCard(' + i + ')">' + GIFT_SVG + '</span>';
     html += '<div class="order-meta" onclick="toggleCard(' + i + ')">';
     if (o.type)      html += '<span><span class="badge badge-type">'   + esc(o.type)   + '</span></span>';
